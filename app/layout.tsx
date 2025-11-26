@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "RealtyGenie - AI-Powered Real Estate Lead Generation",
   description: "Transform your real estate business with AI-powered lead generation and nurturing",
+  icons: {
+    icon: "/logo.png"
+  }
 };
 
 export default function RootLayout({

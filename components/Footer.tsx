@@ -212,52 +212,6 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Contact Info */}
-        <div className="py-8 border-t border-white/5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <motion.a
-              href="mailto:info@realtygenie.co"
-              whileHover={{ scale: 1.02 }}
-              className="flex items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/10 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/5 transition-all group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center group-hover:bg-[#D4AF37]/30 transition-all">
-                <Mail className="w-5 h-5 text-[#D4AF37]" />
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Email Us</div>
-                <div className="text-sm text-white font-medium">info@realtygenie.co</div>
-              </div>
-            </motion.a>
-
-            <motion.a
-              href="tel:+177879222220"
-              whileHover={{ scale: 1.02 }}
-              className="flex items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/10 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/5 transition-all group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center group-hover:bg-[#D4AF37]/30 transition-all">
-                <Phone className="w-5 h-5 text-[#D4AF37]" />
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Call Us</div>
-                <div className="text-sm text-white font-medium">+1 (778) 792-2220</div>
-              </div>
-            </motion.a>
-
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="flex items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/10 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/5 transition-all group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center group-hover:bg-[#D4AF37]/30 transition-all">
-                <MapPin className="w-5 h-5 text-[#D4AF37]" />
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 mb-1">Visit Us</div>
-                <div className="text-sm text-white font-medium">Toronto, Canada</div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-
         {/* Bottom Bar */}
         <div className="py-6 border-t border-white/5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -265,7 +219,14 @@ export default function Footer() {
               © {currentYear} Realty Genie. All rights reserved. Built with{" "}
               <span className="text-[#D4AF37]">✨</span> for real estate professionals.
             </p>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center justify-center md:justify-end gap-6">
+              <a
+                href="mailto:info@realtygenie.co"
+                className="text-neutral-500 hover:text-[#D4AF37] text-sm transition-colors flex items-center gap-2"
+              >
+                <Mail className="w-4 h-4" />
+                info@realtygenie.co
+              </a>
               <Link
                 href="/sitemap"
                 className="text-neutral-500 hover:text-[#D4AF37] text-sm transition-colors"

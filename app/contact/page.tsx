@@ -41,45 +41,19 @@ export default function ContactPage() {
           />
         </motion.div>
 
-        {/* Contact Cards Preview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        {/* Contact Card */}
+        <div className="max-w-md mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm"
+            className="p-8 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/5 transition-all"
           >
-            <div className="w-12 h-12 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center mb-4">
-              <Mail className="w-6 h-6 text-[#D4AF37]" />
+            <div className="w-16 h-16 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center mb-6 mx-auto">
+              <Mail className="w-8 h-8 text-[#D4AF37]" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Email Us</h3>
-            <p className="text-neutral-400 text-sm">info@realtygenie.co</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm"
-          >
-            <div className="w-12 h-12 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center mb-4">
-              <Phone className="w-6 h-6 text-[#D4AF37]" />
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Call Us</h3>
-            <p className="text-neutral-400 text-sm">+1 (778) 792-2220</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm"
-          >
-            <div className="w-12 h-12 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center mb-4">
-              <MapPin className="w-6 h-6 text-[#D4AF37]" />
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Visit Us</h3>
-            <p className="text-neutral-400 text-sm">Toronto, Canada</p>
+            <h3 className="text-xl font-semibold text-white mb-3 text-center">Get in Touch</h3>
+            <p className="text-neutral-400 text-base text-center">info@realtygenie.co</p>
           </motion.div>
         </div>
 

@@ -64,8 +64,8 @@ export default function NavbarDemo() {
                 <NavbarButton
                   as="button"
                   onClick={() => window.location.href = '/auth/login'}
-                  className="text-white"
-                  variant="secondary"
+                  className="text-neutral-900 font-semibold text-md"
+                  variant="primary"
                 >
                   Login
                 </NavbarButton>

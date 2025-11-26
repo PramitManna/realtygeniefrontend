@@ -233,16 +233,17 @@ export const MobileNavToggle = ({
 export const NavbarLogo = () => {
   return (
     <a
-      href="#"
-      className="relative z-20 mr-4 flex items-center space-x-4 px-2 py-1 text-sm font-normal text-black"
+      href="/"
+      className="relative z-20 mr-4 flex items-center space-x-3 px-2 py-1 text-sm font-normal text-black"
     >
       <img
-        src="https://assets.aceternity.com/logo-dark.png"
-        alt="logo"
-        width={30}
-        height={30}
+        src="/logo.png"
+        alt="Realty Genie Logo"
+        width={40}
+        height={40}
+        className="rounded-lg"
       />
-      <span className="font-medium text-white dark:text-white">Realty Genie</span>
+      <span className=" text-2xl text-white dark:text-white">Realty Genie</span>
     </a>
   );
 };

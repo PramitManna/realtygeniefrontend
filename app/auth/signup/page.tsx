@@ -11,10 +11,12 @@ import { FaFacebook, FaTwitter } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { ChevronLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SignupPage() {
     const router = useRouter();
     const supabase = createClient();
+    const { user, isLoading: authLoading } = useAuth();
     const [mounted, setMounted] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -26,6 +28,13 @@ export default function SignupPage() {
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (user && !authLoading) {
+            router.push('/');
+        }
+    }, [user, authLoading, router]);
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();

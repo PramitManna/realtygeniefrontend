@@ -58,12 +58,12 @@ export default function Footer() {
     { icon: FaFacebookF, href: "https://facebook.com/realtygenie", label: "Facebook" },
   ];
 
-  const stats = [
-    { icon: Users, value: "10K+", label: "Active Agents" },
-    { icon: Mail, value: "1M+", label: "Emails Sent" },
-    { icon: TrendingUp, value: "92%", label: "Response Rate" },
-    { icon: Zap, value: "24/7", label: "Automation" },
-  ];
+  // const stats = [
+  //   { icon: Users, value: "10K+", label: "Active Agents" },
+  //   { icon: Mail, value: "1M+", label: "Emails Sent" },
+  //   { icon: TrendingUp, value: "92%", label: "Response Rate" },
+  //   { icon: Zap, value: "24/7", label: "Automation" },
+  // ];
 
   return (
     <footer className="relative bg-gradient-to-b from-[#0A0A0A] via-[#0B0B0B] to-black border-t border-white/5">
@@ -97,7 +97,7 @@ export default function Footer() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Stats Section */}
-        <div className="py-12 border-b border-white/5">
+        {/* <div className="py-12 border-b border-white/5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <motion.div
@@ -114,12 +114,12 @@ export default function Footer() {
                 >
                   <stat.icon className="w-6 h-6 text-[#D4AF37]" />
                 </motion.div>
-                <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
+                <div className="text-3xl font-bold text-neutral-300 mb-1">{stat.value}</div>
                 <div className="text-sm text-neutral-400">{stat.label}</div>
               </motion.div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Main Footer Content */}
         <div className="py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
@@ -133,7 +133,7 @@ export default function Footer() {
               >
                 <Home className="w-5 h-5 text-black" />
               </motion.div>
-              <span className="text-2xl font-bold text-white group-hover:text-[#D4AF37] transition-colors">
+              <span className="text-2xl font-bold text-neutral-300 group-hover:text-[#D4AF37] transition-colors">
                 Realty Genie
               </span>
             </Link>
@@ -146,13 +146,13 @@ export default function Footer() {
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="w-4 h-4 text-[#D4AF37]" />
-                <p className="text-white font-semibold text-sm">Stay Updated</p>
+                <p className="text-neutral-300 font-semibold text-sm">Stay Updated</p>
               </div>
               <div className="flex gap-2">
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-[#D4AF37]/50 transition-all text-sm"
+                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-neutral-300 placeholder-neutral-500 focus:outline-none focus:border-[#D4AF37]/50 transition-all text-sm"
                 />
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -186,7 +186,7 @@ export default function Footer() {
           {/* Links Sections */}
           {Object.entries(footerLinks).map(([category, links], categoryIndex) => (
             <div key={category}>
-              <h3 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">
+              <h3 className="text-neutral-300 font-semibold mb-4 text-sm uppercase tracking-wider">
                 {category}
               </h3>
               <ul className="space-y-3">

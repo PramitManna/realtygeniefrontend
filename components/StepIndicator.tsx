@@ -1,0 +1,73 @@
+'use client';
+
+import { FiCheckCircle } from 'react-icons/fi';
+
+interface StepIndicatorProps {
+  currentStep: 'upload' | 'listing' | 'template' | 'caption' | 'publish';
+}
+
+export default function StepIndicator({ currentStep }: StepIndicatorProps) {
+  const steps = [
+    { id: 'upload', label: 'Upload', description: 'Choose images' },
+    { id: 'listing', label: 'Listing', description: 'Property info' },
+    { id: 'template', label: 'Template', description: 'Apply design' },
+    { id: 'caption', label: 'Caption', description: 'Add text' },
+    { id: 'publish', label: 'Publish', description: 'Post' },
+  ];
+
+  const stepOrder = ['upload', 'listing', 'template', 'caption', 'publish'];
+  const currentIndex = stepOrder.indexOf(currentStep);
+
+  return (
+    <div className="w-full sticky top-16 z-40">
+      <div className="max-w-3xl mx-auto px-4 py-4">
+        <div className="flex items-center justify-between relative">
+          {/* Progress Bar Background */}
+          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-zinc-800 -z-10" />
+
+          {/* Active Progress Bar */}
+          <div
+            className="absolute top-1/2 left-0 h-0.5 bg-gold -z-10 transition-all duration-500 ease-in-out"
+            style={{ width: `${(currentIndex / (steps.length - 1)) * 100}%` }}
+          />
+
+          {steps.map((step, index) => {
+            const isActive = index === currentIndex;
+            const isCompleted = index < currentIndex;
+
+            return (
+              <div key={step.id} className="flex flex-col items-center relative">
+                <div
+                  className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300 ${
+                    isActive
+                      ? 'bg-gold border-gold text-black scale-110 shadow-sm shadow-gold/30'
+                      : isCompleted
+                      ? 'bg-gold border-gold text-black'
+                      : 'bg-zinc-900 border-zinc-700 text-zinc-400'
+                  }`}
+                >
+                  {isCompleted ? (
+                    <FiCheckCircle className="w-5 h-5" />
+                  ) : (
+                    <span className="text-xs font-bold">{index + 1}</span>
+                  )}
+                </div>
+                <div className="mt-2 absolute top-8 w-20 text-center hidden sm:block">
+                  <p
+                    className={`text-xs font-medium transition-colors duration-300 ${
+                      isActive
+                        ? 'text-gold'
+                        : 'text-zinc-500'
+                    }`}
+                  >
+                    {step.label}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

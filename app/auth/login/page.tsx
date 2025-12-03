@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AnimatedHouse from "@/components/ui/AnimatedHouse";
@@ -9,6 +9,7 @@ import { Twitter, Facebook, ChevronLeft } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { FaTwitter, FaFacebook } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 
@@ -16,10 +17,19 @@ function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const supabase = createClient();
+    const { user, isLoading: authLoading } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (user && !authLoading) {
+            const redirectTo = searchParams.get('redirect') || '/';
+            router.push(redirectTo);
+        }
+    }, [user, authLoading, searchParams, router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,7 +48,7 @@ function LoginForm() {
         }
 
         // Redirect to the original page or dashboard
-        const redirectTo = searchParams.get('redirect') || '/dashboard';
+        const redirectTo = searchParams.get('redirect') || '/';
         router.push(redirectTo);
         router.refresh();
     };
@@ -192,7 +202,7 @@ function LoginForm() {
                         <button
                             type="button"
                             onClick={async () => {
-                                const redirectTo = searchParams.get('redirect') || '/dashboard';
+                                const redirectTo = searchParams.get('redirect') || '/';
                                 const { error } = await supabase.auth.signInWithOAuth({
                                     provider: "google",
                                     options: {
@@ -209,7 +219,7 @@ function LoginForm() {
                         <button
                             type="button"
                             onClick={async () => {
-                                const redirectTo = searchParams.get('redirect') || '/dashboard';
+                                const redirectTo = searchParams.get('redirect') || '/';
                                 const { error } = await supabase.auth.signInWithOAuth({
                                     provider: "twitter",
                                     options: {
@@ -227,7 +237,7 @@ function LoginForm() {
                         {/* <button
                             type="button"
                             onClick={async () => {
-                                const redirectTo = searchParams.get('redirect') || '/dashboard';
+                                const redirectTo = searchParams.get('redirect') || '/';
                                 const { error } = await supabase.auth.signInWithOAuth({
                                     provider: "facebook",
                                     options: {

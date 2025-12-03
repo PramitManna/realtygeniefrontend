@@ -7,6 +7,7 @@ import { Upload, Building2, MessageSquare, Check, Mail, Trash2, MapPin, Home, X,
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { searchCities, CANADIAN_CITIES } from "@/utils/cities";
+import AddressAutocomplete from "@/components/AddressInput";
 
 interface OnboardingData {
   avatar_url: string | null;
@@ -16,6 +17,7 @@ interface OnboardingData {
   address: string;
   years_in_business: string;
   signature_block: string | null;
+  signature_image_url: string | null;
   markets: string[];
   property_types: string[];
   description: string;
@@ -25,6 +27,22 @@ interface OnboardingData {
 
 const propertyTypes = ["Residential", "Commercial", "Industrial", "Mixed-Use", "Vacant Land", "Multi-Family"];
 
+// Canadian phone number validation - accepts all common formats
+// Format: (XXX) XXX-XXXX, XXX-XXX-XXXX, XXXXXXXXXX, +1-XXX-XXX-XXXX, +1 (XXX) XXX-XXXX, etc.
+const CANADIAN_PHONE_REGEX = /^(\+?1[-.\s]?)?\(?([2-9]\d{2})\)?[-.\s]?([2-9]\d{2})[-.\s]?(\d{4})$/;
+
+const validateCanadianPhone = (phone: string): { valid: boolean; message: string } => {
+  if (!phone || phone.trim().length === 0) {
+    return { valid: false, message: "Phone number is required" };
+  }
+
+  if (!CANADIAN_PHONE_REGEX.test(phone)) {
+    return { valid: false, message: "Invalid phone format. Use: (XXX) XXX-XXXX or XXX-XXX-XXXX" };
+  }
+
+  return { valid: true, message: "Valid phone number" };
+};
+
 export default function OnboardingPageV2() {
   const router = useRouter();
   const supabase = createClient();
@@ -32,13 +50,16 @@ export default function OnboardingPageV2() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [signatureImagePreview, setSignatureImagePreview] = useState<string | null>(null);
   const [isOAuthUser, setIsOAuthUser] = useState(false);
   const [totalSteps, setTotalSteps] = useState(8);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [filteredCities, setFilteredCities] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
-  
+  const [phoneError, setPhoneError] = useState("");
+  const [phoneValid, setPhoneValid] = useState(false);
+
   const [formData, setFormData] = useState<OnboardingData>({
     avatar_url: null,
     brokerage: "",
@@ -47,6 +68,7 @@ export default function OnboardingPageV2() {
     address: "",
     years_in_business: "0",
     signature_block: null,
+    signature_image_url: null,
     markets: [],
     property_types: [],
     description: "",
@@ -67,12 +89,12 @@ export default function OnboardingPageV2() {
         const isOAuth = hasProvider && !user.app_metadata.providers.includes('email');
         setIsOAuthUser(isOAuth);
         setTotalSteps(isOAuth ? 8 : 7);
-        
+
         // Set default avatar with initials
         const userName = user.user_metadata?.full_name || user.email || "U";
         const initial = userName.charAt(0).toUpperCase();
         const defaultAvatar = `https://ui-avatars.com/api/?name=${initial}&background=D4AF37&color=000&size=200&font-size=0.4`;
-        
+
         setAvatarPreview(defaultAvatar);
         setFormData(prev => ({
           ...prev,
@@ -151,6 +173,7 @@ export default function OnboardingPageV2() {
         address: formData.address,
         years_in_business: parseInt(formData.years_in_business) || 0,
         signature_block: formData.signature_block,
+        signature_image_url: formData.signature_image_url,
         markets: formData.markets,
         property_types: formData.property_types,
         description: formData.description,
@@ -163,10 +186,10 @@ export default function OnboardingPageV2() {
         .eq('id', user.id);
 
       if (error) throw error;
-      
+
       console.log('Onboarding complete, redirecting to dashboard...');
       setTimeout(() => {
-        router.push('/dashboard/lead-nurture');
+        router.push('/');
       }, 500);
     } catch (error) {
       console.error('Error saving onboarding data:', error);
@@ -330,10 +353,11 @@ export default function OnboardingPageV2() {
                   <Mail className="w-8 h-8 text-[var(--color-gold)]" />
                 </div>
                 <h3 className="text-2xl font-semibold text-white mb-2">Email Signature</h3>
-                <p className="text-neutral-400">Add a professional email signature block</p>
+                <p className="text-neutral-400">Add a professional email signature (text and/or image)</p>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Text Signature */}
                 <div>
                   <label className="block text-neutral-400 text-sm mb-2">Signature Block (optional)</label>
                   <textarea
@@ -350,12 +374,73 @@ export default function OnboardingPageV2() {
 
                 {formData.signature_block && (
                   <div className="p-4 bg-neutral-900 rounded-lg border border-neutral-700">
-                    <p className="text-xs text-neutral-400 mb-2">Preview:</p>
+                    <p className="text-xs text-neutral-400 mb-2">Text Preview:</p>
                     <div className="text-sm text-neutral-300 whitespace-pre-wrap font-mono">
                       {formData.signature_block}
                     </div>
                   </div>
                 )}
+
+                {/* Image Signature */}
+                <div className="pt-4 border-t border-neutral-700">
+                  <label className="block text-neutral-400 text-sm mb-2">Signature Image (optional)</label>
+                  <div className="flex flex-col gap-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setSignatureImagePreview(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+
+                        try {
+                          const { data: { user } } = await supabase.auth.getUser();
+                          if (!user) return;
+
+                          const fileExt = file.name.split('.').pop();
+                          const fileName = `signature-${user.id}-${Math.random()}.${fileExt}`;
+                          const filePath = `signatures/${fileName}`;
+
+                          const { error: uploadError } = await supabase.storage
+                            .from('signatures')
+                            .upload(filePath, file);
+
+                          if (uploadError) throw uploadError;
+
+                          const { data: { publicUrl } } = supabase.storage
+                            .from('signatures')
+                            .getPublicUrl(filePath);
+
+                          setFormData({ ...formData, signature_image_url: publicUrl });
+                        } catch (error) {
+                          console.error('Error uploading signature image:', error);
+                        }
+                      }}
+                      className="block w-full text-sm text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-gold)] file:text-black hover:file:opacity-80 cursor-pointer"
+                    />
+                    <p className="text-xs text-neutral-500">
+                      Upload a PNG or JPG image of your signature (recommended: transparent background, max 2MB)
+                    </p>
+                  </div>
+
+                  {signatureImagePreview && (
+                    <div className="mt-4 p-4 bg-neutral-900 rounded-lg border border-neutral-700">
+                      <p className="text-xs text-neutral-400 mb-3">Image Preview:</p>
+                      <div className="flex justify-center">
+                        <img 
+                          src={signatureImagePreview} 
+                          alt="Signature preview" 
+                          className="max-h-32 object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -385,23 +470,62 @@ export default function OnboardingPageV2() {
 
                 <div>
                   <label className="block text-neutral-400 text-sm mb-2">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+1 (555) 123-4567"
-                    className="w-full px-4 py-3 bg-[#111111] border border-neutral-800 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
-                  />
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => {
+                        const newPhone = e.target.value;
+                        setFormData({ ...formData, phone: newPhone });
+                        
+                        // Validate in real-time
+                        if (newPhone.trim().length > 0) {
+                          const validation = validateCanadianPhone(newPhone);
+                          setPhoneValid(validation.valid);
+                          setPhoneError(validation.valid ? "" : validation.message);
+                        } else {
+                          setPhoneValid(false);
+                          setPhoneError("");
+                        }
+                      }}
+                      placeholder="+1 (555) 123-4567"
+                      className={`w-full px-4 py-3 bg-[#111111] border rounded-lg text-white placeholder:text-neutral-500 focus:outline-none transition-colors ${
+                        formData.phone && !phoneValid
+                          ? "border-red-500/50 focus:border-red-500/70"
+                          : formData.phone && phoneValid
+                          ? "border-green-500/50 focus:border-green-500/70"
+                          : "border-neutral-800 focus:border-[var(--color-gold)]/50"
+                      }`}
+                    />
+                    {formData.phone && (
+                      <div className="absolute right-3 top-3">
+                        {phoneValid ? (
+                          <Check className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <X className="w-5 h-5 text-red-500" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {phoneError && (
+                    <p className="text-xs text-red-400 mt-1">{phoneError}</p>
+                  )}
+                  {phoneValid && (
+                    <p className="text-xs text-green-400 mt-1">✓ Valid Canadian phone number</p>
+                  )}
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Format: (XXX) XXX-XXXX, XXX-XXX-XXXX, or +1-XXX-XXX-XXXX
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-neutral-400 text-sm mb-2">Address</label>
-                  <input
-                    type="text"
+
+                  <AddressAutocomplete
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Your business address"
-                    className="w-full px-4 py-3 bg-[#111111] border border-neutral-800 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
+                    onChange={(value: string) =>
+                      setFormData({ ...formData, address: value })
+                    }
                   />
                 </div>
 
@@ -441,11 +565,10 @@ export default function OnboardingPageV2() {
                     key={type}
                     type="button"
                     onClick={() => togglePropertyType(type)}
-                    className={`px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
-                      formData.property_types.includes(type)
+                    className={`px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${formData.property_types.includes(type)
                         ? "border-[var(--color-gold)] bg-[var(--color-gold)]/10 text-white"
                         : "border-neutral-700 bg-[#111111] text-neutral-400 hover:border-neutral-600"
-                    }`}
+                      }`}
                   >
                     {type}
                   </button>
@@ -478,7 +601,7 @@ export default function OnboardingPageV2() {
                       placeholder="Type city name (e.g., Toronto, Vancouver)..."
                       className="w-full px-4 py-3 bg-[#111111] border border-neutral-800 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
                     />
-                    
+
                     {/* Dropdown List */}
                     {showCityDropdown && filteredCities.length > 0 && (
                       <div className="absolute top-full left-0 right-0 mt-1 bg-[#111111] border border-neutral-700 rounded-lg max-h-64 overflow-y-auto z-50">

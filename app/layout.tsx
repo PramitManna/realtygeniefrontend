@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ConditionalLayout from "@/components/ConditionalLayout";
+import { AuthProvider } from "@/contexts/AuthContext";
+import Script from "next/script";
+import GoogleMapsLoader from "@/components/GoogleMapsLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +35,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <ConditionalLayout>{children}</ConditionalLayout>
+        <GoogleMapsLoader />
+        <AuthProvider>
+          <ConditionalLayout>{children}</ConditionalLayout>
+        </AuthProvider>
       </body>
     </html>
   );

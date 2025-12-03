@@ -12,8 +12,23 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
   const excludedPaths = ['/auth/login', '/auth/signup', '/auth/verify', '/auth/forgot-password', '/auth/otp', '/onboarding', '/dashboard'];
   const shouldShowLayout = !excludedPaths.some(path => pathname.startsWith(path));
 
+  // Pages where we want spotlight but no navbar/footer
+  const spotlightOnlyPaths = ['/lead-nurture-tool'];
+  const showSpotlightOnly = spotlightOnlyPaths.some(path => pathname.startsWith(path));
+
   if (!shouldShowLayout) {
     return <>{children}</>;
+  }
+
+  if (showSpotlightOnly) {
+    return (
+      <div className="min-h-screen w-full bg-black/[0.96] antialiased bg-grid-white/[0.02] relative overflow-hidden">
+        <Spotlight />
+        <div className="relative z-10">
+          {children}
+        </div>
+      </div>
+    );
   }
 
   return (

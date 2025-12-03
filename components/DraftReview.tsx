@@ -29,20 +29,6 @@ const PREVIEW_SAMPLES = {
   year: "2025",
 };
 
-// Replace placeholders with sample data for preview
-const replacePlaceholders = (text: string): string => {
-  let replaced = text;
-  Object.entries(PREVIEW_SAMPLES).forEach(([key, value]) => {
-    // Try double braces first {{first_name}}
-    const doubleBracePattern = new RegExp(`{{${key}}}`, "g");
-    replaced = replaced.replace(doubleBracePattern, value);
-    // Fallback to single braces {first_name} in case of formatting issues
-    const singleBracePattern = new RegExp(`{${key}}`, "g");
-    replaced = replaced.replace(singleBracePattern, value);
-  });
-  return replaced;
-};
-
 // Render HTML email safely
 const renderEmailHTML = (htmlContent: string): React.ReactNode => {
   return (
@@ -100,7 +86,6 @@ export default function DraftReview({
 
   const selectedDraft = drafts.find((d) => d.id === selectedDraftId);
   const allReviewed = drafts.every((d) => reviewStatus[d.id] === "approved");
-  const draftIndex = drafts.findIndex((d) => d.id === selectedDraftId);
 
   // Replace placeholders with customizable values
   const replacePlaceholdersWithValues = (text: string, includeSignature: boolean = false): string => {

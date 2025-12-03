@@ -30,14 +30,14 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: "Overview", icon: Home, href: "/dashboard" },
-  { name: "Leads", icon: Users, href: "/dashboard/leads" },
-  { name: "Batches", icon: Layers, href: "/dashboard/batches" },
-  { name: "Campaigns", icon: Mail, href: "/dashboard/campaigns" },
-  { name: "Analytics", icon: BarChart3, href: "/dashboard/analytics" },
-  { name: "Automations", icon: Zap, href: "/dashboard/automations" },
-  { name: "Imports", icon: Upload, href: "/dashboard/imports" },
-  { name: "Settings", icon: Settings, href: "/dashboard/settings" },
+  { name: "Overview", icon: Home, href: "/lead-nurture-tool/dashboard" },
+  { name: "Leads", icon: Users, href: "/lead-nurture-tool/dashboard/leads" },
+  { name: "Batches", icon: Layers, href: "/lead-nurture-tool/dashboard/batches" },
+  { name: "Campaigns", icon: Mail, href: "/lead-nurture-tool/dashboard/campaigns" },
+  { name: "Automations", icon: Zap, href: "/lead-nurture-tool/dashboard/automations" },
+  { name: "Analytics", icon: BarChart3, href: "/lead-nurture-tool/dashboard/analytics" },
+  { name: "Imports", icon: Upload, href: "/lead-nurture-tool/dashboard/imports" },
+  { name: "Settings", icon: Settings, href: "/lead-nurture-tool/dashboard/settings" },
 ];
 
 export default function DashboardLayout({
@@ -63,7 +63,7 @@ export default function DashboardLayout({
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      router.push("/auth/login?redirect=/dashboard");
+      router.push("/auth/login?redirect=/lead-nurture-tool/dashboard");
       return;
     }
     setUser(user);
@@ -86,7 +86,7 @@ export default function DashboardLayout({
   const isActive = (href: string) => pathname === href;
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+    <div className="min-h-screen bg-black text-neutral-300 relative overflow-hidden">
       <Spotlight
         gradientFirst="radial-gradient(68.54% 68.72% at 55.02% 31.46%, hsla(210, 100%, 85%, .08) 0, hsla(210, 100%, 55%, .02) 50%, hsla(210, 100%, 45%, 0) 80%)"
         gradientSecond="radial-gradient(50% 50% at 50% 50%, hsla(210, 100%, 85%, .06) 0, hsla(210, 100%, 55%, .02) 80%, transparent 100%)"
@@ -116,18 +116,18 @@ export default function DashboardLayout({
         {/* Logo Section */}
         <Link href={'/'} className="h-20 flex items-center justify-center px-4 border-b border-neutral-800">
           <img
-            src="https://assets.aceternity.com/logo-dark.png"
+            src="/logo.png"
             alt="logo"
-            width={30}
-            height={30}
-            className="flex-shrink-0"
+            width={40}
+            height={40}
+            className="rounded-lg flex-shrink-0"
           />
           <motion.div
             animate={{ opacity: sidebarHovered ? 1 : 0, width: sidebarHovered ? "auto" : 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-hidden ml-3"
           >
-            <div className="text-sm font-bold text-[var(--color-gold)] whitespace-nowrap">
+            <div className="text-sm  text-[var(--color-gold)] whitespace-nowrap">
               RealtyGenie
             </div>
           </motion.div>
@@ -146,7 +146,7 @@ export default function DashboardLayout({
                   className={`relative flex items-center gap-3 px-3 py-3 rounded-lg transition-all group cursor-pointer ${
                     active
                       ? "bg-[var(--color-gold)]/10 text-[var(--color-gold)]"
-                      : "text-neutral-400 hover:text-white"
+                      : "text-neutral-400 hover:text-neutral-300"
                   }`}
                 >
                   <Icon size={20} />
@@ -162,7 +162,7 @@ export default function DashboardLayout({
                   </motion.span>
 
                   {item.badge && sidebarHovered && (
-                    <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    <span className="ml-auto bg-red-500 text-neutral-300 text-xs px-2 py-0.5 rounded-full">
                       {item.badge}
                     </span>
                   )}
@@ -197,7 +197,7 @@ export default function DashboardLayout({
               className="overflow-hidden flex-1"
             >
               <p className="text-sm font-medium truncate">{user?.email}</p>
-              <p className="text-xs text-neutral-500">Pro Plan</p>
+              <p className="text-xs text-neutral-500"></p>
             </motion.div>
           </div>
 
@@ -251,7 +251,7 @@ export default function DashboardLayout({
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
                         active
                           ? "bg-[var(--color-gold)]/10 text-[var(--color-gold)]"
-                          : "text-neutral-400 hover:text-white"
+                          : "text-neutral-400 hover:text-neutral-300"
                       }`}
                     >
                       <Icon size={20} />
@@ -296,7 +296,7 @@ export default function DashboardLayout({
         <div className="hidden lg:flex h-20 bg-[#0A0A0A] border-b border-neutral-800 items-center justify-between px-8 gap-8 sticky top-0 z-20">
           {/* Left: Title & Welcome */}
           <div className="flex-shrink-0 min-w-max">
-            <h1 className="text-xl font-bold text-white">Dashboard</h1>
+            <h1 className="text-xl font-bold text-neutral-300">Dashboard</h1>
             <p className="text-neutral-400 text-xs -mt-1">
               Welcome back,{" "}
               <span className="text-[var(--color-gold)]">
@@ -305,26 +305,11 @@ export default function DashboardLayout({
             </p>
           </div>
 
-          {/* Middle: Search */}
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search
-                size={18}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500"
-              />
-              <input
-                type="text"
-                placeholder="Search leads, campaigns..."
-                className="w-full pl-10 pr-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-sm placeholder:text-neutral-600 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
-              />
-            </div>
-          </div>
-
           {/* Right Actions */}
           <div className="flex items-center gap-4 flex-shrink-0">
             {/* Notifications */}
             <button className="relative p-2 hover:bg-neutral-900 rounded-lg transition-colors group">
-              <Bell size={20} className="text-neutral-400 group-hover:text-white" />
+              <Bell size={20} className="text-neutral-400 group-hover:text-neutral-300" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
 

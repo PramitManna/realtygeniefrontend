@@ -128,6 +128,12 @@ const CampaignCard = ({
       </div>
 
       {/* Metrics */}
+      <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-start gap-2">
+        <AlertCircle size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-yellow-300">
+          <span className="font-semibold">Beta:</span> Campaign stats are currently under development and may not be fully accurate
+        </p>
+      </div>
       <div className="grid grid-cols-3 gap-3 mb-4 py-4 border-y border-white/10">
         <motion.div
           whileHover={{ scale: 1.05 }}
@@ -179,8 +185,7 @@ const CampaignCard = ({
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-white/10">
         <div className="flex-1">
-          <p className="text-sm font-semibold text-[var(--color-gold)]">{campaign.tones}</p>
-          <p className="text-xs text-neutral-500">
+          <p className="text-md text-neutral-500">
             {campaign.created_at
               ? new Date(campaign.created_at).toLocaleDateString()
               : "Date unavailable"}

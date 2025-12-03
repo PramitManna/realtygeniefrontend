@@ -475,10 +475,15 @@ export default function AutomationsPage() {
           >
             <div className="mb-6">
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={!isGeneratingDrafts ? { scale: 1.02 } : {}}
+                whileTap={!isGeneratingDrafts ? { scale: 0.98 } : {}}
                 onClick={resetAutomation}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 rounded-lg font-semibold transition-all flex items-center gap-2"
+                disabled={isGeneratingDrafts}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                  isGeneratingDrafts
+                    ? "bg-white/5 border border-white/10 text-neutral-500 cursor-not-allowed opacity-50"
+                    : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 cursor-pointer"
+                }`}
               >
                 <X size={16} />
                 Back to Campaigns
@@ -508,10 +513,15 @@ export default function AutomationsPage() {
           >
             <div className="mb-6">
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={!isGeneratingDrafts ? { scale: 1.02 } : {}}
+                whileTap={!isGeneratingDrafts ? { scale: 0.98 } : {}}
                 onClick={resetAutomation}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 rounded-lg font-semibold transition-all flex items-center gap-2"
+                disabled={isGeneratingDrafts}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                  isGeneratingDrafts
+                    ? "bg-white/5 border border-white/10 text-neutral-500 cursor-not-allowed opacity-50"
+                    : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 cursor-pointer"
+                }`}
               >
                 <X size={16} />
                 Back to Campaigns

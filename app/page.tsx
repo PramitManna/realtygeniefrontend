@@ -82,6 +82,7 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, Check, Zap } from "lucide-react";
+import { navigateToToolWithOnboardingCheck } from "@/lib/navigation-helpers";
 
 export default function HomePage() {
   const [user, setUser] = useState<any>(null);
@@ -122,6 +123,27 @@ export default function HomePage() {
     return () => observer.disconnect();
   }, []);
 
+  // Fetch user's onboarding_completed status
+  const fetchOnboardingStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching onboarding status:', error);
+        return null;
+      }
+
+      return data?.onboarding_completed ?? false;
+    } catch (error) {
+      console.error('Error in fetchOnboardingStatus:', error);
+      return null;
+    }
+  };
+
   return (
     <div className="min-h-screen w-full">
       {/* Original Hero Section */}
@@ -152,21 +174,46 @@ export default function HomePage() {
                 Book Demo
               </button>
             </div> */}
-            <button 
-              onClick={() => {
-                if (user) {
-                  router.push('/dashboard/lead-nurture');
-                } else {
-                  router.push('/auth/login?redirect=/dashboard/lead-nurture');
-                }
-              }}
-              className="group relative inline-flex items-center gap-2 px-8 py-3 bg-black/30 text-[var(--color-gold)] rounded-lg font-[var(--font-body)] font-semibold border border-[var(--color-gold)]/30 hover:border-[var(--color-gold)]/50 transition-all duration-300 hover:shadow-[0_0_25px_rgba(212,175,55,0.2)] before:absolute before:inset-0 before:rounded-lg before:bg-[var(--color-gold)] before:opacity-0 hover:before:opacity-5 before:transition-opacity before:-z-10 before:blur-xl"
-            >
-              Try Lead Nurture Tool
-              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            <div className="flex justify-center gap-4">
+              <button 
+                onClick={() => {
+                  if (!user) {
+                    router.push('/auth/login');
+                  }
+                  else if(user && !fetchOnboardingStatus){
+                    router.push('/onboarding')
+                  } 
+                  else {
+                    router.push('/lead-nurture-tool/dashboard');
+                  }
+                }}
+                className="group relative inline-flex items-center gap-2 px-8 py-3 bg-black/30 text-[var(--color-gold)] rounded-lg font-[var(--font-body)] font-semibold border border-[var(--color-gold)]/30 hover:border-[var(--color-gold)]/50 transition-all duration-300 hover:shadow-[0_0_25px_rgba(212,175,55,0.2)] before:absolute before:inset-0 before:rounded-lg before:bg-[var(--color-gold)] before:opacity-0 hover:before:opacity-5 before:transition-opacity before:-z-10 before:blur-xl"
+              >
+                Try Lead Nurture Tool
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              {/* <button 
+                onClick={() => {
+                  if (!user) {
+                    router.push('/auth/login');
+                  }
+                  else if(user && !fetchOnboardingStatus){
+                    router.push('/onboarding')
+                  } 
+                  else {
+                    router.push('/autopost/dashboard');
+                  }
+                }}
+                className="group relative inline-flex items-center gap-2 px-8 py-3 bg-black/30 text-[var(--color-gold)] rounded-lg font-[var(--font-body)] font-semibold border border-[var(--color-gold)]/30 hover:border-[var(--color-gold)]/50 transition-all duration-300 hover:shadow-[0_0_25px_rgba(212,175,55,0.2)] before:absolute before:inset-0 before:rounded-lg before:bg-[var(--color-gold)] before:opacity-0 hover:before:opacity-5 before:transition-opacity before:-z-10 before:blur-xl"
+              >
+                Try Autopost
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button> */}
+            </div>
           </div>
         </div>
       </div>

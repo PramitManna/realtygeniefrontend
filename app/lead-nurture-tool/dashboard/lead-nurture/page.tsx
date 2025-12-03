@@ -42,7 +42,7 @@ export default function LeadNurturePage() {
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      router.push("/auth/login?redirect=/dashboard/lead-nurture");
+      router.push("/auth/login?redirect=/lead-nurture-tool/dashboard/lead-nurture");
       return;
     }
     setUser(user);

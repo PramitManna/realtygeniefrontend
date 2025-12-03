@@ -29,15 +29,6 @@ interface EmailEditorProps {
   };
 }
 
-const PLACEHOLDER_EXAMPLES = [
-  { placeholder: "{{name}}", description: "Recipient's first name", color: "text-blue-400" },
-  { placeholder: "{{city}}", description: "Target city", color: "text-green-400" },
-  { placeholder: "{{company}}", description: "Company name", color: "text-purple-400" },
-  { placeholder: "{{property_count}}", description: "Number of properties", color: "text-orange-400" },
-  { placeholder: "{{market_trend}}", description: "Market trend description", color: "text-pink-400" },
-  { placeholder: "{{year}}", description: "Current year", color: "text-cyan-400" },
-];
-
 export default function EmailEditor({
   subject,
   body,
@@ -265,22 +256,6 @@ export default function EmailEditor({
           />
 
           {/* Placeholders Grid */}
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-3">
-            <p className="text-xs font-semibold text-neutral-300">Quick Insert Placeholders:</p>
-            <div className="grid grid-cols-2 gap-2">
-              {PLACEHOLDER_EXAMPLES.map((item) => (
-                <motion.button
-                  key={item.placeholder}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => insertPlaceholder(item.placeholder)}
-                  className="px-3 py-2 bg-black/30 hover:bg-black/50 border border-white/10 hover:border-white/20 rounded text-xs font-mono transition-all text-left"
-                >
-                  <span className={item.color}>{item.placeholder}</span>
-                </motion.button>
-              ))}
-            </div>
-          </div>
         </motion.div>
     </div>
   );

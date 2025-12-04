@@ -116,8 +116,8 @@ export default function DashboardLayout({
         {/* Logo Section */}
         <Link href={'/'} className="h-20 flex items-center justify-center px-4 border-b border-neutral-800">
           <img
-            src="/logo.png"
-            alt="logo"
+            src="/logo.PNG"
+            alt="RealtyGenie Logo"
             width={40}
             height={40}
             className="rounded-lg flex-shrink-0"

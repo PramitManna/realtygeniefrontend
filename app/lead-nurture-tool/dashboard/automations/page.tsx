@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import DraftReview from "@/components/DraftReview";
+import EmailTriggerModal from "@/components/EmailTriggerModal";
 import axios from "axios";
 import { API_CONFIG } from "@/lib/api-config";
 import {
@@ -67,6 +68,7 @@ export default function AutomationsPage() {
     message: "",
     onConfirm: () => { },
   });
+  const [showEmailTriggerModal, setShowEmailTriggerModal] = useState(false);
 
   const supabase = createClient();
 
@@ -156,7 +158,7 @@ export default function AutomationsPage() {
 
       console.log("CAMPAIGN TONES " + campaignTones)
 
-      const response = await fetch('/api/campaigns/generate-drafts', {
+      const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/campaigns/generate-drafts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -459,6 +461,17 @@ export default function AutomationsPage() {
             <p className="text-neutral-400 mt-2">
               Create and manage multi-touch email campaigns with AI-generated drafts
             </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowEmailTriggerModal(true)}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium flex items-center space-x-2 transition-colors"
+            >
+              <Zap className="h-4 w-4" />
+              <span>Mail Trigger</span>
+            </motion.button>
           </div>
         </div>
       </motion.div>
@@ -875,6 +888,19 @@ export default function AutomationsPage() {
       </AnimatePresence>
 
       <Toast />
+      
+      {/* Email Trigger Modal */}
+      <EmailTriggerModal
+        isOpen={showEmailTriggerModal}
+        onClose={() => setShowEmailTriggerModal(false)}
+        onSuccess={(message) => {
+          setShowEmailTriggerModal(false);
+          showToast(message, "success");
+        }}
+        onError={(error) => {
+          showToast(error, "error");
+        }}
+      />
     </div>
   );
 }

@@ -18,10 +18,18 @@ import { FaXTwitter, FaLinkedinIn, FaInstagram, FaFacebookF } from "react-icons/
 
 export default function Footer() {
   const [mounted, setMounted] = useState(false);
+  const [particles, setParticles] = useState<Array<{left: number, top: number, duration: number}>>([]);
   const currentYear = 2025; // Static year to avoid hydration issues
 
   useEffect(() => {
     setMounted(true);
+    // Generate deterministic particle positions on client side
+    const newParticles = Array.from({ length: 20 }, (_, i) => ({
+      left: (i * 17.3 + 23.7) % 100, // Deterministic but scattered
+      top: (i * 31.1 + 47.2) % 100,
+      duration: 3 + (i % 3)
+    }));
+    setParticles(newParticles);
   }, []);
 
   const footerLinks = {
@@ -70,30 +78,32 @@ export default function Footer() {
       {/* Golden divider line at top */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent rounded-full" />
       
-      {/* Animated background pattern */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-full h-full">
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-[#D4AF37] rounded-full opacity-20"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-              animate={{
-                opacity: [0.2, 0.5, 0.2],
-                scale: [1, 1.5, 1],
-              }}
-              transition={{
-                duration: 3 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          ))}
+      {/* Animated background pattern - Client side only */}
+      {mounted && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute w-full h-full">
+            {particles.map((particle, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-[#D4AF37] rounded-full opacity-20"
+                style={{
+                  left: `${particle.left}%`,
+                  top: `${particle.top}%`,
+                }}
+                animate={{
+                  opacity: [0.2, 0.5, 0.2],
+                  scale: [1, 1.5, 1],
+                }}
+                transition={{
+                  duration: particle.duration,
+                  repeat: Infinity,
+                  delay: i * 0.1,
+                }}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Stats Section */}

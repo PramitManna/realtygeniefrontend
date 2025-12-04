@@ -347,8 +347,8 @@ export default function HomePage() {
                     {/* Header */}
                     <div className="flex items-center justify-between pb-4 border-b border-border/30">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gold/20 flex items-center justify-center">
-                          <span className="text-gold font-bold text-lg">RG</span>
+                        <div className="w-10 h-10 rounded-xl bg-gold/20 flex items-center justify-center p-2">
+                          <img src="/logo.PNG" alt="RG" className="w-full h-full object-contain" />
                         </div>
                         <div>
                           <h3 className="font-semibold">RealtyGenie</h3>

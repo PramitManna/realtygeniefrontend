@@ -55,7 +55,7 @@ export default function ConnectPage() {
 
   const handleMetaConnect = () => {
     if (!user?.id) {
-      console.error('❌ No user ID available for Meta connection');
+      console.error('No user ID available for Meta connection');
       return;
     }
     
@@ -78,7 +78,7 @@ export default function ConnectPage() {
       state: user.id, // Include userId in state for additional verification
     });
 
-    console.log('🚀 Initiating Meta OAuth for user:', user.id);
+    console.log('Initiating Meta OAuth for user:', user.id);
     window.location.href = `${process.env.NEXT_PUBLIC_META_OAUTH_URL}?${params.toString()}`;
   };
 

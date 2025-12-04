@@ -57,8 +57,9 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         // Check if user has a provider (OAuth user)
-        const hasProvider = user.app_metadata?.providers && user.app_metadata.providers.length > 0;
-        const isOAuth = hasProvider && !user.app_metadata.providers.includes('email');
+        const providers = user.app_metadata?.providers || [];
+        const hasProvider = providers.length > 0;
+        const isOAuth = hasProvider && !providers.includes('email');
         setIsOAuthUser(isOAuth);
         setTotalSteps(isOAuth ? 5 : 4); // 5 steps for OAuth (includes password), 4 for regular users
       }

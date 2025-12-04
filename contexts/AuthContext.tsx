@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setHasMetaTokens(tokenStatus);
         console.log('✅ Meta tokens status set to:', tokenStatus);
       } else {
-        console.error('❌ Failed to check Meta tokens:', response.status);
+        console.error('Failed to check Meta tokens:', response.status);
         setHasMetaTokens(false);
       }
     } catch (error) {
@@ -245,7 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('✅ User signed out successfully');
       router.push('/auth/login');
     } catch (error) {
-      console.error('❌ Sign out error:', error);
+      console.error('Sign out error:', error);
       throw error;
     }
   };

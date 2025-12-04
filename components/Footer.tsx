@@ -227,7 +227,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-neutral-500 text-sm text-center md:text-left">
               © {currentYear} Realty Genie. All rights reserved. Built with{" "}
-              <span className="text-[#D4AF37]">✨</span> for real estate professionals.
+              for real estate professionals.
             </p>
             <div className="flex flex-wrap items-center justify-center md:justify-end gap-6">
               <a

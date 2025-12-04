@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "RealtyGenie - AI-Powered Real Estate Lead Generation",
   description: "Transform your real estate business with AI-powered lead generation and nurturing",
   icons: {
-    icon: "/logo.png"
+    icon: "/favicon.ico"
   }
 };
 
@@ -31,6 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning

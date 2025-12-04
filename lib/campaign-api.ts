@@ -5,7 +5,7 @@ interface CampaignCreatePayload {
   description: string;
   batch_id: string;
   email_template: string;
-  tones: string[];
+  persona: string;
   objective: string;
 }
 
@@ -13,7 +13,7 @@ interface CampaignUpdatePayload {
   name?: string;
   description?: string;
   status?: string;
-  tones?: string[];
+  persona?: string;
   objective?: string;
 }
 
@@ -60,7 +60,7 @@ export const campaignApi = {
             name: payload.name,
             description: payload.description,
             email_template: payload.email_template,
-            tones: payload.tones,
+            persona: payload.persona,
             objective: payload.objective,
             total_recipients: totalRecipients,
             status: "draft",

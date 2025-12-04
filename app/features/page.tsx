@@ -82,7 +82,7 @@ const HeroSection = () => (
                 className="inline-block cursor-pointer"
             >
                 <span className="px-4 py-2 rounded-full bg-gold/10 border border-gold/30 text-gold text-sm font-semibold hover:bg-gold/20 hover:border-gold/50 transition-all duration-300">
-                    ✨ Powered by AI & Automation
+                    Powered by AI & Automation
                 </span>
             </motion.div>
 

@@ -31,7 +31,7 @@ interface Campaign {
   subject?: string;
   body?: string;
   status: "active" | "paused" | "draft";
-  tones: string[];
+  persona: string;
   objective: string;
   created_at?: string;
   emailsSent?: number;
@@ -46,13 +46,14 @@ interface AutomationSetup {
 
 export default function AutomationsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-  const [campaignTones, setCampaignTones] = useState<string[]>([]);
   const [showDraftReview, setShowDraftReview] = useState(false);
   const [draftEmails, setDraftEmails] = useState<any[]>([]);
   const [isGeneratingDrafts, setIsGeneratingDrafts] = useState(false);
+  const [isLaunchingCampaign, setIsLaunchingCampaign] = useState(false);
+  const [isApprovingDrafts, setIsApprovingDrafts] = useState(false);
   const [automationStep, setAutomationStep] = useState(1);
   const [queueStats, setQueueStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
@@ -123,7 +124,7 @@ export default function AutomationsPage() {
   const generateDraftEmails = async (campaign: Campaign) => {
     // Prevent generating drafts if campaign already launched
     if (selectedCampaign?.status === 'active') {
-      showToast('❌ Campaign already launched. Cannot generate new drafts.', 'error');
+      showToast('Campaign already launched. Cannot generate new drafts.', 'error');
       return;
     }
 
@@ -138,7 +139,8 @@ export default function AutomationsPage() {
 
       let agentName = 'Your Name';
       let companyName = 'Your Company';
-      let target_city = "your city"
+      // Don't set a default target_city - let user choose or leave empty
+      let target_city: string[] = [];
 
       console.log(selectedCampaign)
 
@@ -152,11 +154,12 @@ export default function AutomationsPage() {
         if (profileData) {
           agentName = profileData.full_name || agentName;
           companyName = profileData.brokerage || companyName;
-          target_city = profileData.markets || target_city;
+          // Don't automatically use profile markets - user should specify target city
+          // target_city = profileData.markets || target_city;
         }
       }
 
-      console.log("CAMPAIGN TONES " + campaignTones)
+
 
       const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/campaigns/generate-drafts`, {
         method: 'POST',
@@ -166,8 +169,8 @@ export default function AutomationsPage() {
         body: JSON.stringify({
           campaign_id: campaignId,
           campaign_name: selectedCampaign?.name || 'Campaign',
-          target_city: Array.isArray(target_city) ? target_city : ["Canadian City"],
-          tones: campaignTones.length > 0 ? campaignTones : ['Professional'],
+          target_city: target_city.length > 0 ? target_city : ["your market"],
+          persona: selectedCampaign?.persona || 'buyer',
           objective: selectedCampaign?.objective || 'lead_nurturing',
           user_id: userId,
         }),
@@ -175,7 +178,7 @@ export default function AutomationsPage() {
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error("❌ Backend error:", errText);
+        console.error("Backend error:", errText);
         throw new Error(errText);
       }
 
@@ -216,7 +219,7 @@ export default function AutomationsPage() {
       setDraftEmails(draftEmails);
       setShowDraftReview(true);
       setAutomationStep(2);
-      showToast(`✨ Generated ${draftEmails.length} email drafts for Month 1`, 'success');
+      showToast(`Generated ${draftEmails.length} email drafts for Month 1`, 'success');
     } catch (error) {
       console.error("Error generating drafts:", error);
       showToast(
@@ -229,6 +232,7 @@ export default function AutomationsPage() {
   };
 
   const handleDraftsApprove = async (finalDrafts: any[]) => {
+    setIsApprovingDrafts(true);
     try {
       // Fetch user's signature block from profile
       const {
@@ -271,6 +275,8 @@ export default function AutomationsPage() {
     } catch (error) {
       console.error("Error approving drafts:", error);
       showToast("Failed to approve drafts", "error");
+    } finally {
+      setIsApprovingDrafts(false);
     }
   };
 
@@ -290,7 +296,7 @@ export default function AutomationsPage() {
         return;
       }
 
-      setIsGeneratingDrafts(true); // Reuse loading state for launch
+      setIsLaunchingCampaign(true);
 
       // Format emails for backend - ensure all fields are present
       const formattedEmails = draftEmails.map((email) => ({
@@ -304,7 +310,7 @@ export default function AutomationsPage() {
         month_number: email.month_number || 1,
       }));
 
-      console.log('📧 Launching campaign with emails:', formattedEmails);
+      console.log('Launching campaign with emails:', formattedEmails);
 
       // Call backend to save approved emails and queue them for sending
       const response = await fetch('/api/campaign-emails/save-approved', {
@@ -334,7 +340,7 @@ export default function AutomationsPage() {
         return;
       }
 
-      showToast("🚀 Campaign launched! Emails queued for sending.", "success");
+      showToast("Campaign launched! Emails queued for sending.", "success");
 
       // Update the campaign status to 'active' in our local state
       setCampaigns(campaigns.map(c =>
@@ -353,13 +359,12 @@ export default function AutomationsPage() {
         'error'
       );
     } finally {
-      setIsGeneratingDrafts(false);
+      setIsLaunchingCampaign(false);
     }
   };
 
   const handleStartAutomation = (campaign: Campaign) => {
     setSelectedCampaign(campaign);
-    setCampaignTones(campaign.tones || []);
     setAutomationStep(1);
 
     // If campaign is active, fetch pending emails
@@ -409,7 +414,6 @@ export default function AutomationsPage() {
 
   const resetAutomation = () => {
     setSelectedCampaign(null);
-    setCampaignTones([]);
     setDraftEmails([]);
     setShowDraftReview(false);
     setAutomationStep(1);
@@ -488,12 +492,12 @@ export default function AutomationsPage() {
           >
             <div className="mb-6">
               <motion.button
-                whileHover={!isGeneratingDrafts ? { scale: 1.02 } : {}}
-                whileTap={!isGeneratingDrafts ? { scale: 0.98 } : {}}
+                whileHover={!(isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts) ? { scale: 1.02 } : {}}
+                whileTap={!(isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts) ? { scale: 0.98 } : {}}
                 onClick={resetAutomation}
-                disabled={isGeneratingDrafts}
+                disabled={isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts}
                 className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                  isGeneratingDrafts
+                  (isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts)
                     ? "bg-white/5 border border-white/10 text-neutral-500 cursor-not-allowed opacity-50"
                     : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 cursor-pointer"
                 }`}
@@ -506,12 +510,49 @@ export default function AutomationsPage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-gradient-to-br from-neutral-950 to-neutral-900 border border-white/10 rounded-2xl p-6 sm:p-8"
+              className="bg-gradient-to-br from-neutral-950 to-neutral-900 border border-white/10 rounded-2xl p-6 sm:p-8 relative"
             >
+              {/* Draft Approval Loading Overlay */}
+              {isApprovingDrafts && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-2xl z-10 flex items-center justify-center"
+                >
+                  <div className="bg-white/10 border border-white/20 rounded-xl p-6 max-w-sm mx-4">
+                    <div className="flex items-center gap-4 mb-4">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full shrink-0"
+                      />
+                      <div>
+                        <h3 className="text-white font-semibold">Approving Drafts</h3>
+                        <p className="text-white/70 text-sm">Adding your signature and finalizing emails</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-white/60">
+                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse"></div>
+                        Fetching your signature block
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-white/60">
+                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                        Appending signature to {draftEmails.length} emails
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-white/60">
+                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+                        Preparing for campaign launch
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
               <DraftReview
                 drafts={draftEmails}
                 onDraftsApprove={handleDraftsApprove}
-                isLoading={false}
+                isLoading={isApprovingDrafts}
               />
             </motion.div>
           </motion.div>
@@ -526,12 +567,12 @@ export default function AutomationsPage() {
           >
             <div className="mb-6">
               <motion.button
-                whileHover={!isGeneratingDrafts ? { scale: 1.02 } : {}}
-                whileTap={!isGeneratingDrafts ? { scale: 0.98 } : {}}
+                whileHover={!(isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts) ? { scale: 1.02 } : {}}
+                whileTap={!(isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts) ? { scale: 0.98 } : {}}
                 onClick={resetAutomation}
-                disabled={isGeneratingDrafts}
+                disabled={isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts}
                 className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                  isGeneratingDrafts
+                  (isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts)
                     ? "bg-white/5 border border-white/10 text-neutral-500 cursor-not-allowed opacity-50"
                     : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 cursor-pointer"
                 }`}
@@ -552,8 +593,8 @@ export default function AutomationsPage() {
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 rounded-lg p-4">
-                  <p className="text-neutral-400 text-sm mb-1">tones</p>
-                  <p className="text-white font-semibold break-words text-sm">{selectedCampaign.tones}</p>
+                  <p className="text-neutral-400 text-sm mb-1">Persona</p>
+                  <p className="text-white font-semibold break-words text-sm capitalize">{selectedCampaign.persona}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
                   <p className="text-neutral-400 text-sm mb-1">Objective</p>
@@ -567,7 +608,7 @@ export default function AutomationsPage() {
                         ? 'text-yellow-400'
                         : 'text-blue-400'
                     }`}>
-                    {selectedCampaign.status === 'active' ? '🚀 Active' : selectedCampaign.status === 'paused' ? '⏸️ Paused' : '📝 Draft'}
+                    {selectedCampaign.status === 'active' ? 'Active' : selectedCampaign.status === 'paused' ? 'Paused' : 'Draft'}
                   </p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
@@ -590,15 +631,21 @@ export default function AutomationsPage() {
                 </h3>
 
                 {isLoadingStats ? (
-                  <div className="flex items-center justify-center py-8">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center justify-center py-8 space-y-3"
+                  >
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Loader size={24} className="text-green-400" />
-                    </motion.div>
-                    <span className="ml-3 text-neutral-300">Loading scheduled emails...</span>
-                  </div>
+                      className="w-6 h-6 border-2 border-green-500/30 border-t-green-500 rounded-full"
+                    />
+                    <div className="text-center">
+                      <p className="text-green-300 font-medium">Loading Email Queue</p>
+                      <p className="text-green-400/70 text-sm">Fetching scheduled emails and delivery status...</p>
+                    </div>
+                  </motion.div>
                 ) : draftEmails.length > 0 ? (
                   <div className="space-y-2">
                     {draftEmails.map((email: any, idx) => {
@@ -655,7 +702,7 @@ export default function AutomationsPage() {
                   {
                     step: 1,
                     title: "Generate Email Drafts",
-                    description: "AI creates 5 unique email variations tailored to your campaign tones and objective",
+                    description: "AI creates 5 unique email variations tailored to your campaign persona and objective",
                     icon: Zap,
                     completed: automationStep > 1,
                   },
@@ -725,73 +772,141 @@ export default function AutomationsPage() {
 
             {/* Action Button */}
             {automationStep === 1 && (
-              <motion.button
-                whileHover={!isGeneratingDrafts && selectedCampaign?.status !== 'active' ? { scale: 1.02 } : {}}
-                whileTap={!isGeneratingDrafts && selectedCampaign?.status !== 'active' ? { scale: 0.98 } : {}}
-                onClick={() => generateDraftEmails(selectedCampaign)}
-                disabled={automationStep > 1 || isGeneratingDrafts || selectedCampaign?.status === 'active'}
-                className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${automationStep > 1 || isGeneratingDrafts || selectedCampaign?.status === 'active'
-                    ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
-                    : "bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black"
-                  }`}
-              >
-                {isGeneratingDrafts ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Loader size={20} />
-                    </motion.div>
-                    Generating Drafts...
-                  </>
-                ) : selectedCampaign?.status === 'active' ? (
-                  <>
-                    <CheckCircle size={20} />
-                    ✅ Campaign Already Launched
-                  </>
-                ) : automationStep > 1 ? (
-                  <>
-                    <CheckCircle size={20} />
-                    Drafts Generated
-                  </>
-                ) : (
-                  <>
-                    <Zap size={20} />
-                    Generate Email Drafts
-                  </>
+              <>
+                {/* Generate Drafts Loading State */}
+                {isGeneratingDrafts && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-6 mb-4"
+                  >
+                    <div className="flex items-start gap-4">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        className="w-8 h-8 border-3 border-yellow-500/30 border-t-yellow-500 rounded-full mt-1 flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-yellow-300 mb-2 flex items-center gap-2">
+                          <Zap size={20} />
+                          Generating Email Drafts
+                        </h3>
+                        <p className="text-yellow-200/80 text-sm mb-3">
+                          Our AI is crafting personalized email content based on your campaign persona and objectives.
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-yellow-300/70">
+                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
+                            Analyzing campaign requirements
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-yellow-300/70">
+                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                            Creating personalized content for {selectedCampaign?.persona || 'target audience'}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-yellow-300/70">
+                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+                            Generating 5 unique email variations
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
-              </motion.button>
+
+                <motion.button
+                  whileHover={!isGeneratingDrafts && selectedCampaign?.status !== 'active' ? { scale: 1.02 } : {}}
+                  whileTap={!isGeneratingDrafts && selectedCampaign?.status !== 'active' ? { scale: 0.98 } : {}}
+                  onClick={() => generateDraftEmails(selectedCampaign)}
+                  disabled={automationStep > 1 || isGeneratingDrafts || selectedCampaign?.status === 'active'}
+                  className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${automationStep > 1 || isGeneratingDrafts || selectedCampaign?.status === 'active'
+                      ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
+                      : "bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black"
+                    }`}
+                >
+                  {isGeneratingDrafts ? (
+                    "Processing..."
+                  ) : selectedCampaign?.status === 'active' ? (
+                    <>
+                      <CheckCircle size={20} />
+                      ✅ Campaign Already Launched
+                    </>
+                  ) : automationStep > 1 ? (
+                    <>
+                      <CheckCircle size={20} />
+                      Drafts Generated
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={20} />
+                      Generate Email Drafts
+                    </>
+                  )}
+                </motion.button>
+              </>
             )}
 
             {automationStep === 3 && (
-              <motion.button
-                whileHover={!isGeneratingDrafts ? { scale: 1.02 } : {}}
-                whileTap={!isGeneratingDrafts ? { scale: 0.98 } : {}}
-                onClick={handleLaunchCampaign}
-                disabled={isGeneratingDrafts}
-                className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${isGeneratingDrafts
-                    ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
-                    : "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30"
-                  }`}
-              >
-                {isGeneratingDrafts ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Loader size={20} />
-                    </motion.div>
-                    Launching Campaign...
-                  </>
-                ) : (
-                  <>
-                    <Zap size={20} />
-                    🚀 Launch Campaign & Queue Emails
-                  </>
+              <>
+                {/* Campaign Launch Loading State */}
+                {isLaunchingCampaign && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-6 mb-4"
+                  >
+                    <div className="flex items-start gap-4">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        className="w-8 h-8 border-3 border-green-500/30 border-t-green-500 rounded-full mt-1 shrink-0"
+                      />
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-green-300 mb-2 flex items-center gap-2">
+                          <Mail size={20} />
+                          Launching Campaign
+                        </h3>
+                        <p className="text-green-200/80 text-sm mb-3">
+                          Setting up your campaign and queuing emails for automated delivery according to your schedule.
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-green-300/70">
+                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                            Saving approved email drafts
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-green-300/70">
+                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                            Scheduling delivery times for {draftEmails.length} emails
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-green-300/70">
+                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+                            Adding to send queue
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
-              </motion.button>
+
+                <motion.button
+                  whileHover={!isLaunchingCampaign ? { scale: 1.02 } : {}}
+                  whileTap={!isLaunchingCampaign ? { scale: 0.98 } : {}}
+                  onClick={handleLaunchCampaign}
+                  disabled={isLaunchingCampaign}
+                  className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${isLaunchingCampaign
+                      ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
+                      : "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30"
+                    }`}
+                >
+                  {isLaunchingCampaign ? (
+                    "Processing..."
+                  ) : (
+                    <>
+                      <Zap size={20} />
+                      Launch Campaign & Queue Emails
+                    </>
+                  )}
+                </motion.button>
+              </>
             )}
           </motion.div>
         ) : (
@@ -814,7 +929,21 @@ export default function AutomationsPage() {
             {/* Campaign Grid */}
             {isLoading ? (
               <div className="text-center py-12">
-                <p className="text-neutral-400">Loading campaigns...</p>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex flex-col items-center gap-4"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full"
+                  />
+                  <div className="text-center">
+                    <p className="text-white font-medium mb-1">Loading Your Campaigns</p>
+                    <p className="text-neutral-400 text-sm">Fetching campaign data and statistics...</p>
+                  </div>
+                </motion.div>
               </div>
             ) : filteredCampaigns.length === 0 ? (
               <motion.div
@@ -858,7 +987,7 @@ export default function AutomationsPage() {
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center gap-2 text-sm text-neutral-400">
                         <Zap size={16} />
-                        <span>{campaign.tones}</span>
+                        <span className="capitalize">{campaign.persona}</span>
                       </div>
                       {campaign.emailsTotal && (
                         <div className="flex items-center gap-2 text-sm text-neutral-400">
@@ -893,9 +1022,9 @@ export default function AutomationsPage() {
       <EmailTriggerModal
         isOpen={showEmailTriggerModal}
         onClose={() => setShowEmailTriggerModal(false)}
-        onSuccess={(message) => {
-          setShowEmailTriggerModal(false);
-          showToast(message, "success");
+        onSuccess={() => {
+          // Success animation is handled within the modal
+          // No toaster needed - modal will auto-close after animation
         }}
         onError={(error) => {
           showToast(error, "error");

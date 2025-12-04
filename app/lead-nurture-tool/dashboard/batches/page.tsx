@@ -8,14 +8,7 @@ import { batchesApi } from '@/lib/api';
 
 const supabase = createClient();
 
-const TONE_OPTIONS = [
-  "Professional", "Friendly", "Casual", "Formal", "Conversational",
-  "Enthusiastic", "Empathetic", "Direct", "Warm", "Confident",
-  "Consultative", "Educational", "Persuasive", "Supportive", "Authentic",
-  "Trustworthy", "Approachable", "Respectful", "Engaging", "Articulate",
-  "Patient", "Motivational", "Clear", "Concise", "Detailed",
-  "Story-driven", "Data-driven", "Solution-focused", "Personable", "Diplomatic"
-];
+
 
 interface Batch {
   id: string;
@@ -47,24 +40,22 @@ export default function BatchesPage() {
   const [newBatchName, setNewBatchName] = useState('');
   const [newBatchDescription, setNewBatchDescription] = useState('');
   const [newBatchObjective, setNewBatchObjective] = useState('');
-  const [newBatchTones, setNewBatchTones] = useState<string[]>([]);
   const [newBatchPersonas, setNewBatchPersonas] = useState<string[]>([]);
-  const [userTones, setUserTones] = useState<string[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [editLoading, setEditLoading] = useState(false);
 
   const personaOptions = [
-    { value: 'buyer', label: '🏠 Buyer', description: 'Looking to purchase properties' },
-    { value: 'seller', label: '📋 Seller', description: 'Looking to sell properties' },
-    { value: 'investor', label: '💰 Investor', description: 'Investment opportunities' },
-    { value: 'client', label: '👤 Client', description: 'Existing or past clients' },
-    { value: 'referral', label: '🤝 Referral', description: 'Referral sources' },
+    { value: 'buyer', label: 'Buyer', description: 'Looking to purchase properties' },
+    { value: 'seller', label: 'Seller', description: 'Looking to sell properties' },
+    { value: 'investor', label: 'Investor', description: 'Investment opportunities' },
+    { value: 'past_client', label: 'Past Client', description: 'Existing or past clients' },
+    { value: 'referral', label: 'Referral', description: 'Referral sources' },
+    { value: 'cold_prospect', label: 'Cold Prospect', description: 'New potential clients' },
   ];
 
   // Fetch batches on component mount
   useEffect(() => {
     fetchBatches();
-    fetchUserTones();
   }, []);
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info', duration = 3000) => {
@@ -122,17 +113,7 @@ export default function BatchesPage() {
     }
   };
 
-  const fetchUserTones = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
 
-      const data = await batchesApi.getUserTones(user.id);
-      setUserTones(data.tones || []);
-    } catch (error) {
-      console.error('Error fetching user tones:', error);
-    }
-  };
 
   const handleCreateBatch = async () => {
     if (!newBatchName.trim()) {
@@ -145,15 +126,7 @@ export default function BatchesPage() {
       return;
     }
 
-    if (newBatchTones.length === 0) {
-      addToast('Please select at least 1 tone', 'error');
-      return;
-    }
 
-    if (newBatchTones.length > 5) {
-      addToast('Please select at most 5 tones', 'error');
-      return;
-    }
 
     if (newBatchPersonas.length === 0) {
       addToast('Please select a target persona', 'error');
@@ -169,7 +142,6 @@ export default function BatchesPage() {
         batch_name: newBatchName,
         description: newBatchDescription,
         objective: newBatchObjective || null,
-        tone_override: newBatchTones,
         persona: newBatchPersonas.length > 0 ? newBatchPersonas[0] : null,
         status: 'active',
         lead_count: 0
@@ -194,7 +166,6 @@ export default function BatchesPage() {
       setNewBatchName('');
       setNewBatchDescription('');
       setNewBatchObjective('');
-      setNewBatchTones([]);
       setNewBatchPersonas([]);
       setShowCreateModal(false);
       addToast('Batch created successfully!', 'success');
@@ -231,16 +202,7 @@ export default function BatchesPage() {
       return;
     }
 
-    const tonesArray = Array.isArray(editingBatch?.tone_override) ? editingBatch.tone_override : (editingBatch?.tone_override ? [editingBatch.tone_override] : []);
-    if (tonesArray.length === 0) {
-      addToast('Please select at least 1 tone', 'error');
-      return;
-    }
 
-    if (tonesArray.length > 5) {
-      addToast('Please select at most 5 tones', 'error');
-      return;
-    }
 
     if (!(editingBatch as any).personas || (editingBatch as any).personas.length === 0) {
       addToast('Please select a target persona', 'error');
@@ -255,7 +217,6 @@ export default function BatchesPage() {
           batch_name: editingBatch.batch_name,
           description: editingBatch.description,
           objective: editingBatch.objective,
-          tone_override: editingBatch.tone_override,
           persona: (editingBatch as any).personas || null,
           schedule_cadence: editingBatch.schedule_cadence,
           updated_at: new Date().toISOString()
@@ -420,7 +381,6 @@ export default function BatchesPage() {
                   setNewBatchName('');
                   setNewBatchDescription('');
                   setNewBatchObjective('');
-                  setNewBatchTones([]);
                 }}
                 className="text-neutral-400 hover:text-white"
               >
@@ -481,40 +441,7 @@ export default function BatchesPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-neutral-200 mb-3">Communication Tones * ({newBatchTones.length}/5)</label>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  {TONE_OPTIONS.map(tone => (
-                    <button
-                      key={tone}
-                      onClick={() => {
-                        setNewBatchTones(prev => 
-                          prev.includes(tone) 
-                            ? prev.filter(t => t !== tone)
-                            : prev.length < 5 
-                              ? [...prev, tone]
-                              : prev
-                        );
-                      }}
-                      className={`px-3 py-2 rounded text-sm font-medium transition-all flex items-center justify-between ${
-                        newBatchTones.includes(tone)
-                          ? 'bg-[var(--color-gold)] text-black'
-                          : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-                      } ${newBatchTones.length >= 5 && !newBatchTones.includes(tone) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={newBatchTones.length >= 5 && !newBatchTones.includes(tone)}
-                    >
-                      <span>{tone}</span>
-                      {newBatchTones.includes(tone) && <Check size={16} className="ml-1" />}
-                    </button>
-                  ))}
-                </div>
-                {newBatchTones.length === 0 && (
-                  <p className="text-xs text-red-400">Select at least 1 tone</p>
-                )}
-                {newBatchTones.length > 0 && (
-                  <p className="text-xs text-neutral-400">Selected: {newBatchTones.join(', ')}</p>
-                )}
-              </div>
+
 
               <div>
                 <label className="block text-sm font-semibold text-neutral-200 mb-2">Target Persona *</label>
@@ -550,7 +477,6 @@ export default function BatchesPage() {
                   setNewBatchName('');
                   setNewBatchDescription('');
                   setNewBatchObjective('');
-                  setNewBatchTones([]);
                   setNewBatchPersonas([]);
                 }}
                 className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white px-4 py-2 rounded font-semibold transition-all"
@@ -619,50 +545,7 @@ export default function BatchesPage() {
                   <p className="text-xs text-neutral-500 mt-1">{editingBatch.batch_name.length}/100 characters</p>
                 </div>
 
-                {/* Tone Override */}
-                <div>
-                  <label className="block text-sm font-semibold text-neutral-200 mb-3 flex items-center gap-2">
-                    <Radio size={16} className="text-[var(--color-gold)]" />
-                    Communication Tones * ({(Array.isArray(editingBatch?.tone_override) ? editingBatch.tone_override.length : 0)}/5)
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 mb-2">
-                    {TONE_OPTIONS.map(tone => {
-                      const isSelected = Array.isArray(editingBatch?.tone_override) ? editingBatch.tone_override.includes(tone) : editingBatch?.tone_override === tone;
-                      const toneCount = Array.isArray(editingBatch?.tone_override) ? editingBatch.tone_override.length : (editingBatch?.tone_override ? 1 : 0);
-                      return (
-                        <button
-                          key={tone}
-                          onClick={() => {
-                            if (isSelected || toneCount < 5) {
-                              const currentTones = Array.isArray(editingBatch?.tone_override) ? editingBatch.tone_override : (editingBatch?.tone_override ? [editingBatch.tone_override] : []);
-                              setEditingBatch({ 
-                                ...editingBatch, 
-                                tone_override: isSelected 
-                                  ? currentTones.filter(t => t !== tone)
-                                  : [...currentTones, tone]
-                              });
-                            }
-                          }}
-                          className={`px-3 py-2 rounded text-sm font-medium transition-all flex items-center justify-between ${
-                            isSelected
-                              ? 'bg-[var(--color-gold)] text-black'
-                              : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-                          } ${toneCount >= 5 && !isSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          disabled={toneCount >= 5 && !isSelected}
-                        >
-                          <span>{tone}</span>
-                          {isSelected && <Check size={16} className="ml-1" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {(!Array.isArray(editingBatch?.tone_override) || editingBatch.tone_override.length === 0) && (
-                    <p className="text-xs text-red-400">Select at least 1 tone</p>
-                  )}
-                  {Array.isArray(editingBatch?.tone_override) && editingBatch.tone_override.length > 0 && (
-                    <p className="text-xs text-neutral-400">Selected: {editingBatch.tone_override.join(', ')}</p>
-                  )}
-                </div>
+
 
                 {/* Target Persona */}
                 <div>

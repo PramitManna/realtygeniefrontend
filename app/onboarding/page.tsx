@@ -85,8 +85,9 @@ export default function OnboardingPageV2() {
     const checkAuthProvider = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const hasProvider = user.app_metadata?.providers && user.app_metadata.providers.length > 0;
-        const isOAuth = hasProvider && !user.app_metadata.providers.includes('email');
+        const providers = user.app_metadata?.providers || [];
+        const hasProvider = providers.length > 0;
+        const isOAuth = hasProvider && !providers.includes('email');
         setIsOAuthUser(isOAuth);
         setTotalSteps(isOAuth ? 8 : 7);
 

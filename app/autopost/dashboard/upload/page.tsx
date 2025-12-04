@@ -72,7 +72,7 @@ function UploadPageContent() {
 
   // Check if user has Meta tokens OR is coming from OAuth
   if (!hasMetaTokens && connected !== 'true') {
-    console.log('❌ Redirecting to dashboard - No Meta tokens');
+    console.log('Redirecting to dashboard - No Meta tokens');
     router.push('/autopost/dashboard');
     return null;
   }

@@ -237,7 +237,7 @@ export const NavbarLogo = () => {
       className="relative z-20 mr-4 flex items-center space-x-3 px-2 py-1 text-sm font-normal text-black"
     >
       <img
-        src="/logo.png"
+        src="/logo.PNG"
         alt="Realty Genie Logo"
         width={40}
         height={40}

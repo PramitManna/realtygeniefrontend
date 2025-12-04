@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, Eye, Mail, ChevronDown, AlertCircle, Zap, Settings } from "lucide-react";
+import { CheckCircle, Eye, Mail, ChevronDown, AlertCircle, Zap } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import EmailEditor from "./EmailEditor";
 
 interface Email {
   id: string;
@@ -19,14 +18,25 @@ interface DraftReviewProps {
   isLoading?: boolean;
 }
 
-// Sample data for preview placeholder replacement
-const PREVIEW_SAMPLES = {
-  first_name: "John",
-  city: "Surrey",
-  company: "Royal Realty",
-  property_count: "47",
-  market_trend: "6.2% YoY",
-  year: "2025",
+// Use actual user data instead of hardcoded samples
+const getCurrentYear = () => new Date().getFullYear().toString();
+
+// Utility functions for text/HTML conversion
+const stripHTML = (html: string): string => {
+  // Create a temporary div element to parse HTML
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = html;
+  return tempDiv.textContent || tempDiv.innerText || "";
+};
+
+const convertTextToHTML = (text: string): string => {
+  // Convert plain text to HTML with proper line breaks and paragraphs
+  return text
+    .split('\n\n')
+    .map(paragraph => paragraph.trim())
+    .filter(paragraph => paragraph.length > 0)
+    .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+    .join('');
 };
 
 // Render HTML email safely
@@ -50,10 +60,9 @@ export default function DraftReview({
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(drafts[0]?.id || null);
   const [reviewStatus, setReviewStatus] = useState<Record<string, "pending" | "approved">>({});
   const [editingDraft, setEditingDraft] = useState<Record<string, Partial<Email>>>({});
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true); // Always show preview by default
+  const [editingField, setEditingField] = useState<{draftId: string, field: 'subject' | 'body'} | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [showPlaceholders, setShowPlaceholders] = useState(false);
-  const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>(PREVIEW_SAMPLES);
   const [signatureBlock, setSignatureBlock] = useState<string>("");
   const supabase = createClient();
 
@@ -87,10 +96,22 @@ export default function DraftReview({
   const selectedDraft = drafts.find((d) => d.id === selectedDraftId);
   const allReviewed = drafts.every((d) => reviewStatus[d.id] === "approved");
 
-  // Replace placeholders with customizable values
+  // Simple placeholder replacement without customization
   const replacePlaceholdersWithValues = (text: string, includeSignature: boolean = false): string => {
     let replaced = text;
-    Object.entries(placeholderValues).forEach(([key, value]) => {
+    
+    // Replace common placeholders with placeholder text to show structure
+    const placeholders = {
+      'recipient_name': '[Recipient Name]',
+      'first_name': '[First Name]', 
+      'city': '[City]',
+      'company': '[Company Name]',
+      'property_count': '[Property Count]',
+      'market_trend': '[Market Trend]',
+      'year': getCurrentYear()
+    };
+    
+    Object.entries(placeholders).forEach(([key, value]) => {
       // Try double braces first {{first_name}}
       const doubleBracePattern = new RegExp(`{{${key}}}`, "g");
       replaced = replaced.replace(doubleBracePattern, value);
@@ -204,36 +225,7 @@ export default function DraftReview({
           </AnimatePresence>
         </div>
 
-        {/* Toggle Button */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowPreview(!showPreview)}
-          className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-300"
-        >
-          {showPreview ? (
-            <>
-              <Mail size={18} />
-              Show Email
-            </>
-          ) : (
-            <>
-              <Eye size={18} />
-              Show Preview
-            </>
-          )}
-        </motion.button>
 
-        {/* Placeholder Settings Button */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowPlaceholders(!showPlaceholders)}
-          className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/50 text-purple-300"
-        >
-          <Settings size={18} />
-          Placeholders
-        </motion.button>
 
         {/* Approve Button */}
         {selectedDraft && (
@@ -260,62 +252,87 @@ export default function DraftReview({
 
       {/* Main Content - Full Screen Editor OR Preview */}
       {selectedDraft ? (
-        <AnimatePresence mode="wait">
-          {!showPreview ? (
-            <motion.div
-              key="editor"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white/5 border border-white/10 rounded-lg p-6 min-h-[600px]"
-            >
-              <EmailEditor
-                subject={editingDraft[selectedDraft.id]?.subject || selectedDraft.subject}
-                body={editingDraft[selectedDraft.id]?.body || selectedDraft.body}
-                onSubjectChange={(subject) =>
-                  handleEditDraft(selectedDraft.id, "subject", subject)
-                }
-                onBodyChange={(body) =>
-                  handleEditDraft(selectedDraft.id, "body", body)
-                }
-                preview={{ name: "John", city: "San Francisco" }}
+        /* Editable Preview */
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white/5 border border-white/10 rounded-lg p-8 min-h-[600px] overflow-y-auto space-y-8"
+        >
+          {/* Subject */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">
+                Subject Line
+              </p>
+              <button
+                onClick={() => setEditingField(
+                  editingField?.draftId === selectedDraft.id && editingField?.field === 'subject' 
+                    ? null 
+                    : {draftId: selectedDraft.id, field: 'subject'}
+                )}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors px-2 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20"
+              >
+                {editingField?.draftId === selectedDraft.id && editingField?.field === 'subject' ? 'Save' : 'Edit'}
+              </button>
+            </div>
+            
+            {editingField?.draftId === selectedDraft.id && editingField?.field === 'subject' ? (
+              <input
+                type="text"
+                value={editingDraft[selectedDraft.id]?.subject || selectedDraft.subject}
+                onChange={(e) => handleEditDraft(selectedDraft.id, "subject", e.target.value)}
+                className="w-full text-3xl font-bold bg-transparent border border-yellow-500/50 rounded-lg p-3 text-[var(--color-gold)] focus:outline-none focus:border-yellow-500"
+                autoFocus
               />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="preview"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white/5 border border-white/10 rounded-lg p-8 min-h-[600px] overflow-y-auto space-y-8"
-            >
-              {/* Subject */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">
-                  📧 Subject Line
-                </p>
-                <p className="text-3xl font-bold text-[var(--color-gold)]">
-                  {replacePlaceholdersWithValues(editingDraft[selectedDraft.id]?.subject || selectedDraft.subject, false)}
-                </p>
-              </div>
+            ) : (
+              <p className="text-3xl font-bold text-[var(--color-gold)] cursor-pointer hover:bg-white/5 p-3 rounded-lg transition-colors"
+                onClick={() => setEditingField({draftId: selectedDraft.id, field: 'subject'})}>
+                {replacePlaceholdersWithValues(editingDraft[selectedDraft.id]?.subject || selectedDraft.subject, false)}
+              </p>
+            )}
+          </div>
 
-              {/* Divider */}
-              <div className="h-px bg-white/10" />
+          {/* Divider */}
+          <div className="h-px bg-white/10" />
 
-              {/* Body */}
-              <div className="space-y-4">
-                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">
-                  ✉️ Email Body
-                </p>
-                <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+          {/* Body */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">
+                ✉️ Email Body
+              </p>
+              <button
+                onClick={() => setEditingField(
+                  editingField?.draftId === selectedDraft.id && editingField?.field === 'body' 
+                    ? null 
+                    : {draftId: selectedDraft.id, field: 'body'}
+                )}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors px-2 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20"
+              >
+                {editingField?.draftId === selectedDraft.id && editingField?.field === 'body' ? 'Save' : 'Edit'}
+              </button>
+            </div>
+            
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+              {editingField?.draftId === selectedDraft.id && editingField?.field === 'body' ? (
+                <textarea
+                  value={stripHTML(editingDraft[selectedDraft.id]?.body || selectedDraft.body)}
+                  onChange={(e) => handleEditDraft(selectedDraft.id, "body", convertTextToHTML(e.target.value))}
+                  className="w-full min-h-[400px] bg-transparent border border-yellow-500/50 rounded-lg p-4 text-neutral-300 focus:outline-none focus:border-yellow-500 resize-none"
+                  placeholder="Enter your email content here..."
+                  autoFocus
+                />
+              ) : (
+                <div 
+                  className="cursor-pointer hover:bg-white/5 p-2 rounded transition-colors min-h-[200px]"
+                  onClick={() => setEditingField({draftId: selectedDraft.id, field: 'body'})}
+                >
                   {renderEmailHTML(replacePlaceholdersWithValues(editingDraft[selectedDraft.id]?.body || selectedDraft.body, true))}
                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              )}
+            </div>
+          </div>
+        </motion.div>
       ) : (
         <div className="h-96 flex items-center justify-center bg-white/5 border border-white/10 rounded-lg">
           <p className="text-neutral-400">Select a draft to get started</p>
@@ -324,48 +341,6 @@ export default function DraftReview({
 
       {/* Bottom Actions */}
       <div className="space-y-3">
-        {/* Placeholder Customization Panel */}
-        <AnimatePresence>
-          {showPlaceholders && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-6 space-y-4"
-            >
-              <div className="flex items-center gap-2">
-                <Settings size={18} className="text-purple-400" />
-                <h3 className="text-sm font-semibold text-purple-300">Customize Placeholders</h3>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                {Object.entries(placeholderValues).map(([key, value]) => (
-                  <div key={key} className="space-y-2">
-                    <label className="text-xs font-semibold text-neutral-400 uppercase">
-                      {key}
-                    </label>
-                    <input
-                      type="text"
-                      value={value}
-                      onChange={(e) =>
-                        setPlaceholderValues((prev) => ({
-                          ...prev,
-                          [key]: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
-                      placeholder={`Enter ${key}`}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded text-xs text-blue-200">
-                💡 Tip: These values will be used to replace placeholders in the email preview. They won't be saved with the email - you'll set actual recipient data when sending.
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
         {!allReviewed && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}

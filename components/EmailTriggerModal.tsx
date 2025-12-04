@@ -6,11 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { API_CONFIG } from "@/lib/api-config";
 import { X, Mail, Users, MessageCircle, Send, Loader } from "lucide-react";
 
-interface Batch {
-  id: string;
-  name: string;
-  lead_count: number;
-}
+
 
 interface EmailTriggerModalProps {
   isOpen: boolean;
@@ -32,61 +28,9 @@ const EMAIL_PURPOSES = [
   "Thank you message"
 ];
 
-const EMAIL_TONES = [
-  "professional",
-  "friendly", 
-  "inspirational",
-  "humorous",
-  "persuasive",
-  "informative",
-  "warm",
-  "confident",
-  "celebratory",
-  "grateful"
-];
 
-// Memoized batch item component to prevent unnecessary re-renders
-const BatchItem = memo(({ 
-  batch, 
-  isSelected, 
-  onToggle 
-}: { 
-  batch: Batch; 
-  isSelected: boolean; 
-  onToggle: (id: string) => void; 
-}) => (
-  <div
-    onClick={() => onToggle(batch.id)}
-    className={`
-      p-4 border rounded-xl cursor-pointer transition-all
-      ${isSelected
-        ? "border-blue-500 bg-blue-50" 
-        : "border-gray-200 hover:border-gray-300"
-      }
-    `}
-  >
-    <div className="flex items-center justify-between">
-      <div>
-        <h3 className="font-medium text-gray-900">{batch.name}</h3>
-        <p className="text-sm text-gray-500">
-          {batch.lead_count} leads
-        </p>
-      </div>
-      <div className={`
-        w-5 h-5 rounded border-2 flex items-center justify-center
-        ${isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"}
-      `}>
-        {isSelected && (
-          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-        )}
-      </div>
-    </div>
-  </div>
-));
 
-BatchItem.displayName = 'BatchItem';
+
 
 export default function EmailTriggerModal({
   isOpen,
@@ -94,131 +38,50 @@ export default function EmailTriggerModal({
   onSuccess,
   onError
 }: EmailTriggerModalProps) {
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
   const [selectedPurpose, setSelectedPurpose] = useState<string>("");
-  const [selectedTones, setSelectedTones] = useState<string[]>([]);
+  const [selectedPersona, setSelectedPersona] = useState<string>("");
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const personaOptions = [
+    { value: 'buyer', label: 'Buyer', description: 'Looking to purchase properties' },
+    { value: 'seller', label: 'Seller', description: 'Looking to sell properties' },
+    { value: 'investor', label: 'Investor', description: 'Investment opportunities' },
+    { value: 'past_client', label: 'Past Client', description: 'Existing or past clients' },
+    { value: 'referral', label: 'Referral', description: 'Referral sources' },
+    { value: 'cold_prospect', label: 'Cold Prospect', description: 'New potential clients' },
+  ];
   const [shortDescription, setShortDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingBatches, setIsLoadingBatches] = useState(false);
   const [lastSubmitTime, setLastSubmitTime] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
   
   const supabase = createClient();
 
   useEffect(() => {
-    if (isOpen) {
-      fetchBatches();
-    } else {
+    if (!isOpen) {
       // Reset form state when modal closes
-      setSelectedBatches([]);
       setSelectedPurpose("");
-      setSelectedTones([]);
+      setSelectedPersona("");
       setShortDescription("");
       setIsLoading(false);
     }
   }, [isOpen]);
 
-  const fetchBatches = useCallback(async () => {
-    // Prevent multiple simultaneous fetches
-    if (isLoadingBatches) return;
-    
-    try {
-      setIsLoadingBatches(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        onError("User not authenticated");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("batches")
-        .select("id, name, lead_count")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setBatches(data || []);
-    } catch (error) {
-      console.error("Error fetching batches:", error);
-      onError("Failed to load lead batches");
-    } finally {
-      setIsLoadingBatches(false);
-    }
-  }, [isLoadingBatches, supabase, onError]);
-
-  const handleBatchToggle = useCallback((batchId: string) => {
-    setSelectedBatches(prev => 
-      prev.includes(batchId) 
-        ? prev.filter(id => id !== batchId)
-        : [...prev, batchId]
-    );
-  }, []);
-
-  const handleToneToggle = useCallback((tone: string) => {
-    setSelectedTones(prev => {
-      if (prev.includes(tone)) {
-        return prev.filter(t => t !== tone);
-      } else if (prev.length < 5) {
-        return [...prev, tone];
-      }
-      return prev; // Don't add if already at max (5)
-    });
-  }, []);
-
   const isFormValid = useMemo(() => {
-    return selectedBatches.length > 0 && selectedPurpose && selectedTones.length > 0;
-  }, [selectedBatches.length, selectedPurpose, selectedTones.length]);
-
-  // Memoize batches rendering to prevent unnecessary re-renders
-  const renderedBatches = useMemo(() => {
-    if (isLoadingBatches) {
-      return (
-        <div className="flex items-center justify-center p-8">
-          <Loader className="h-6 w-6 animate-spin text-gray-500" />
-        </div>
-      );
-    }
-    
-    if (batches.length === 0) {
-      return (
-        <div className="text-center p-8 text-gray-500">
-          <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p>No lead batches found</p>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {batches.map((batch) => (
-          <BatchItem
-            key={batch.id}
-            batch={batch}
-            isSelected={selectedBatches.includes(batch.id)}
-            onToggle={handleBatchToggle}
-          />
-        ))}
-      </div>
-    );
-  }, [batches, selectedBatches, isLoadingBatches, handleBatchToggle]);
+    return selectedPurpose && selectedPersona;
+  }, [selectedPurpose, selectedPersona]);
 
   const validateForm = useCallback(() => {
-    if (selectedBatches.length === 0) {
-      onError("Please select at least one lead batch");
-      return false;
-    }
     if (!selectedPurpose) {
       onError("Please select a purpose for the email");
       return false;
     }
-    if (selectedTones.length === 0) {
-      onError("Please select at least one tone");
+    if (!selectedPersona) {
+      onError("Please select a persona for the email");
       return false;
     }
     return true;
-  }, [selectedBatches.length, selectedPurpose, selectedTones.length, onError]);
+  }, [selectedPurpose, selectedPersona, onError]);
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
@@ -242,9 +105,8 @@ export default function EmailTriggerModal({
       }
 
       const requestData = {
-        batch_ids: selectedBatches,
         purpose: selectedPurpose,
-        tones: selectedTones,
+        persona: selectedPersona,
         short_description: shortDescription || null,
         user_id: user.id
       };
@@ -272,8 +134,14 @@ export default function EmailTriggerModal({
         }
 
         const result = await response.json();
-        onSuccess(result.message || "Emails triggered successfully!");
-        handleClose();
+        
+        // Show success animation instead of calling onSuccess
+        setShowSuccess(true);
+        
+        // Auto-close after animation
+        setTimeout(() => {
+          handleClose();
+        }, 2500);
         
       } catch (fetchError) {
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
@@ -293,19 +161,14 @@ export default function EmailTriggerModal({
   };
 
   const handleClose = () => {
-    setSelectedBatches([]);
     setSelectedPurpose("");
-    setSelectedTones([]);
+    setSelectedPersona("");
     setShortDescription("");
+    setShowSuccess(false);
     onClose();
   };
 
-  const getTotalLeads = () => {
-    return selectedBatches.reduce((total, batchId) => {
-      const batch = batches.find(b => b.id === batchId);
-      return total + (batch?.lead_count || 0);
-    }, 0);
-  };
+
 
   if (!isOpen) return null;
 
@@ -316,7 +179,7 @@ export default function EmailTriggerModal({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+          className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden relative"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -329,7 +192,7 @@ export default function EmailTriggerModal({
                   Trigger Email Campaign
                 </h2>
                 <p className="text-sm text-gray-500">
-                  Send personalized emails to your lead batches
+                  Send personalized emails to all your leads
                 </p>
               </div>
             </div>
@@ -345,14 +208,6 @@ export default function EmailTriggerModal({
           {/* Content */}
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
             <div className="space-y-6">
-              {/* Lead Batches Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lead Batches *
-                </label>
-                {renderedBatches}
-              </div>
-
               {/* Purpose Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -361,46 +216,37 @@ export default function EmailTriggerModal({
                 <select
                   value={selectedPurpose}
                   onChange={(e) => setSelectedPurpose(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
                 >
-                  <option value="">Select a purpose...</option>
+                  <option value="" className="text-gray-500">Select a purpose...</option>
                   {EMAIL_PURPOSES.map((purpose) => (
-                    <option key={purpose} value={purpose}>
+                    <option key={purpose} value={purpose} className="text-gray-900 bg-white">
                       {purpose}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Tone Selection */}
+              {/* Persona Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Tone * (1-5 selections)
+                  Target Persona *
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                  {EMAIL_TONES.map((tone) => (
-                    <button
-                      key={tone}
-                      onClick={() => handleToneToggle(tone)}
-                      disabled={!selectedTones.includes(tone) && selectedTones.length >= 5}
-                      className={`
-                        p-3 text-sm rounded-xl border transition-all capitalize
-                        ${selectedTones.includes(tone)
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-gray-200 hover:border-gray-300 text-gray-700"
-                        }
-                        ${!selectedTones.includes(tone) && selectedTones.length >= 5
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
-                        }
-                      `}
-                    >
-                      {tone}
-                    </button>
+                <select
+                  value={selectedPersona}
+                  onChange={(e) => setSelectedPersona(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  required
+                >
+                  <option value="" className="text-gray-500">Select target persona...</option>
+                  {personaOptions.map((persona) => (
+                    <option key={persona.value} value={persona.value} className="text-gray-900 bg-white">
+                      {persona.label} - {persona.description}
+                    </option>
                   ))}
-                </div>
+                </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Selected: {selectedTones.length}/5
+                  The email tone will be automatically optimized for this persona
                 </p>
               </div>
 
@@ -419,28 +265,20 @@ export default function EmailTriggerModal({
               </div>
 
               {/* Summary */}
-              {selectedBatches.length > 0 && (
+              {(selectedPurpose || selectedPersona) && (
                 <div className="bg-gray-50 rounded-xl p-4">
                   <h3 className="font-medium text-gray-900 mb-2">Email Summary</h3>
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p>• Batches selected: {selectedBatches.length}</p>
-                    <p>• Total leads: {getTotalLeads()}</p>
+                    <p>• Target: All leads</p>
                     <p>• Purpose: {selectedPurpose || "Not selected"}</p>
-                    <p>• Tones: {selectedTones.join(", ") || "None selected"}</p>
+                    <p>• Persona: {personaOptions.find(p => p.value === selectedPersona)?.label || "None selected"}</p>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Warning message */}
-          {selectedBatches.length > 0 && getTotalLeads() > 10 && (
-            <div className="px-6 py-3 bg-yellow-50 border-y border-yellow-200">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Sending emails to {getTotalLeads()} leads may take several minutes. Please be patient.
-              </p>
-            </div>
-          )}
+
 
           {/* Footer */}
           <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
@@ -476,6 +314,120 @@ export default function EmailTriggerModal({
               )}
             </button>
           </div>
+
+          {/* Success Animation Overlay */}
+          <AnimatePresence>
+            {showSuccess && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-white/95 backdrop-blur-sm flex items-center justify-center z-10"
+              >
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ 
+                    scale: [0, 1.2, 1],
+                    rotate: [0, 0, 0]
+                  }}
+                  transition={{ 
+                    duration: 0.6,
+                    ease: "backOut"
+                  }}
+                  className="text-center"
+                >
+                  {/* Animated Checkmark */}
+                  <motion.div
+                    className="w-24 h-24 mx-auto mb-6 relative"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, duration: 0.4 }}
+                  >
+                    <motion.div 
+                      className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.1, duration: 0.5, ease: "backOut" }}
+                    >
+                      {/* Checkmark SVG with draw animation */}
+                      <motion.svg 
+                        width="48" 
+                        height="48" 
+                        viewBox="0 0 24 24" 
+                        fill="none"
+                        className="text-white"
+                      >
+                        <motion.path
+                          d="M20 6L9 17l-5-5"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
+                        />
+                      </motion.svg>
+                    </motion.div>
+                    
+                    {/* Success ripple effect */}
+                    <motion.div
+                      className="absolute inset-0 bg-green-500/20 rounded-full"
+                      initial={{ scale: 1, opacity: 0 }}
+                      animate={{ 
+                        scale: [1, 1.5, 2],
+                        opacity: [0, 0.6, 0]
+                      }}
+                      transition={{ 
+                        delay: 0.3,
+                        duration: 1.2,
+                        repeat: 2,
+                        repeatDelay: 0.3
+                      }}
+                    />
+                  </motion.div>
+                  
+                  {/* Success Message */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6, duration: 0.4 }}
+                  >
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                      Emails Sent Successfully! 
+                    </h3>
+                    <p className="text-gray-600 max-w-sm mx-auto">
+                      Your personalized emails have been generated and sent to all leads. 
+                      They should receive them shortly.
+                    </p>
+                  </motion.div>
+
+                  {/* Confetti-like particles */}
+                  {[...Array(12)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-2 h-2 bg-gradient-to-r from-blue-400 to-green-400 rounded-full"
+                      style={{
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`,
+                      }}
+                      initial={{ scale: 0, rotate: 0 }}
+                      animate={{ 
+                        scale: [0, 1, 0],
+                        rotate: [0, 180, 360],
+                        y: [0, -20, 20]
+                      }}
+                      transition={{
+                        delay: 0.8 + Math.random() * 0.4,
+                        duration: 1.5,
+                        ease: "easeOut"
+                      }}
+                    />
+                  ))}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </AnimatePresence>

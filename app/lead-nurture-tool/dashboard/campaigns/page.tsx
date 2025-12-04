@@ -55,7 +55,7 @@ interface Campaign {
   created_at?: string;
   updated_at?: string;
   template: string;
-  tones: string[];
+  persona: string;
   objective: string;
 }
 
@@ -395,7 +395,7 @@ const CreateCampaignModal = ({
   const [step, setStep] = useState(1);
   const [campaignName, setCampaignName] = useState("");
   const [campaignDesc, setCampaignDesc] = useState("");
-  const [tones, setTone] = useState(batch?.tone_override || "Professional");
+  const [persona, setPersona] = useState("buyer");
   const [objective, setObjective] = useState(batch?.objective || "Lead Nurturing");
   const [selectedTemplate, setSelectedTemplate] = useState("standard");
 
@@ -403,7 +403,7 @@ const CreateCampaignModal = ({
     setStep(1);
     setCampaignName("");
     setCampaignDesc("");
-    setTone(batch?.tone_override || "Professional");
+    setPersona("buyer");
     setObjective(batch?.objective || "Lead Nurturing");
     setSelectedTemplate("standard");
     onClose();
@@ -413,7 +413,7 @@ const CreateCampaignModal = ({
     onCreateCampaign({
       name: campaignName,
       description: campaignDesc,
-      tones,
+      persona,
       objective,
       template: selectedTemplate,
     });
@@ -517,6 +517,25 @@ const CreateCampaignModal = ({
                     exit={{ opacity: 0, x: -20 }}
                     className="space-y-6"
                   >
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-3">Target Persona</label>
+                      <select
+                        value={persona}
+                        onChange={(e) => setPersona(e.target.value)}
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
+                      >
+                        <option value="buyer" className="bg-neutral-900">Buyer - Consultative & Advisor tone</option>
+                        <option value="seller" className="bg-neutral-900">Seller - Expert & Data driven tone</option>
+                        <option value="investor" className="bg-neutral-900">Investor - Expert & Data driven tone</option>
+                        <option value="past_client" className="bg-neutral-900">Past Client - Friendly & Warm tone</option>
+                        <option value="referral" className="bg-neutral-900">Referral - Friendly & Warm tone</option>
+                        <option value="cold_prospect" className="bg-neutral-900">Cold Prospect - Light-hearted & Humorous tone</option>
+                      </select>
+                      <p className="text-xs text-neutral-400 mt-2">
+                        The email tone will be automatically optimized for this persona
+                      </p>
+                    </div>
+                    
                     <div>
                       <label className="block text-sm font-semibold text-white mb-3">Email Template</label>
                       <div className="grid grid-cols-2 gap-3">
@@ -729,7 +748,7 @@ export default function CampaignsPage() {
         name: campaignData.name,
         description: campaignData.description,
         email_template: campaignData.template,
-        tones: selectedBatch.tone_override || ["Professional"],
+        persona: campaignData.persona || "buyer",
         objective: selectedBatch.objective || "Lead Nurturing",
       });
 
@@ -1058,7 +1077,7 @@ export default function CampaignsPage() {
                   { label: "Open Rate", value: `${((selectedCampaign.openRate ?? 0) || 0).toFixed(1)}%` },
                   { label: "Click Rate", value: `${((selectedCampaign.clickRate ?? 0) || 0).toFixed(1)}%` },
                   { label: "Response Rate", value: `${((selectedCampaign.responseRate ?? 0) || 0).toFixed(1)}%` },
-                  { label: "Tone", value: selectedCampaign.tones },
+                  { label: "Persona", value: selectedCampaign.persona },
                 ].map((stat, i) => (
                   <div key={i} className="flex justify-between items-center pb-3 border-b border-white/10 last:border-b-0">
                     <p className="text-neutral-400">{stat.label}</p>

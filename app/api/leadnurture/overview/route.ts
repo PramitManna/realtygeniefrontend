@@ -13,9 +13,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Use local backend in development, production URL otherwise
-    const backendUrl = process.env.NODE_ENV === 'development' 
-      ? process.env.NEXT_PUBLIC_LOCAL_BACKEND_URL || 'http://localhost:8000'
-      : process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
     
     const response = await fetch(
       `${backendUrl}/api/leadnurture/overview?user_id=${userId}`,

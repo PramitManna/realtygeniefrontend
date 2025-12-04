@@ -3,7 +3,7 @@
  * Handles all API calls to the backend server
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 // Type definitions
 export interface DashboardOverview {

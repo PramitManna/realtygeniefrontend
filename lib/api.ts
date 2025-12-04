@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 
 // API base URLs
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 interface ApiResponse<T = any> {

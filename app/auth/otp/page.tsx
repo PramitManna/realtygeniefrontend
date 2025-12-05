@@ -78,7 +78,7 @@ export default function OTPLogin() {
         setSuccess("Login successful! Redirecting...");
         // User is now authenticated, redirect based on onboarding status
         setTimeout(() => {
-          router.push("/dashboard/lead-nurture");
+          router.push("/");
         }, 1000);
       }
     } catch (err) {

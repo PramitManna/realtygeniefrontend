@@ -35,6 +35,8 @@ interface ImportAndSaveResponse {
     duplicates_removed: number;
     empty_rows: number;
     inserted: number;
+    skipped_duplicates?: number;
+    duplicate_count?: number;
   };
   inserted_leads: Array<{
     email: string;
@@ -42,6 +44,14 @@ interface ImportAndSaveResponse {
     phone?: string;
     address?: string;
   }>;
+  duplicate_info?: {
+    [email: string]: {
+      email: string;
+      existing_batch: string;
+      existing_name: string;
+      reason: string;
+    };
+  };
 }
 
 // Create axios instance for backend
@@ -52,10 +62,11 @@ const backendApi: AxiosInstance = axios.create({
   },
 });
 
-// Error handler
+// Error handler - preserves detailed error messages from backend
 const handleApiError = (error: AxiosError): string => {
   if (error.response?.data) {
     const data = error.response.data as any;
+    // Return the detailed error message from backend (includes duplicate info)
     return data.detail || data.message || "An error occurred";
   }
   return error.message || "An unknown error occurred";
@@ -309,6 +320,44 @@ export const leadsApi = {
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(handleApiError(error as AxiosError));
+    }
+  },
+
+  /**
+   * Check for duplicate emails before importing
+   */
+  async checkDuplicates(
+    emails: string[],
+    userId: string,
+    batchId?: string
+  ): Promise<{
+    success: boolean;
+    total_emails: number;
+    duplicate_count: number;
+    unique_count: number;
+    duplicates: string[];
+    duplicate_details: Array<{
+      email: string;
+      existing_batch: string;
+      existing_name: string;
+      existing_id: string;
+      error_message: string;
+    }>;
+    new_emails: string[];
+    summary: string;
+  }> {
+    try {
+      const response = await backendApi.post(
+        "/api/leads/check-duplicates",
+        {
+          emails,
+          user_id: userId,
+          batch_id: batchId,
         }
       );
       return response.data;

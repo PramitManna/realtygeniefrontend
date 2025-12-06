@@ -73,7 +73,7 @@ export default function LeadsPage() {
 
   
 
-  const addToast = (message: string, type: "success" | "error" | "info" = "info", duration = 3000) => {
+  const addToast = (message: string, type: "success" | "error" | "info" = "info", duration = 4000) => {
     const id = Math.random().toString(36).substr(2, 9);
     const newToast: Toast = { id, message, type, duration };
     setToasts(prev => [...prev, newToast]);
@@ -203,7 +203,14 @@ export default function LeadsPage() {
       fetchBatches(); // Refresh batch lead counts
     } catch (error) {
       console.error("Error adding lead:", error);
-      addToast("Failed to add lead", "error");
+      const errorMessage = error instanceof Error ? error.message : "Failed to add lead";
+      
+      // Show specific error message from backend (includes duplicate info)
+      if (errorMessage.includes("already exists")) {
+        addToast(`Duplicate email: ${errorMessage}`, "error", 5000);
+      } else {
+        addToast(errorMessage, "error");
+      }
     }
   };
 
@@ -242,7 +249,14 @@ export default function LeadsPage() {
       addToast("Lead updated successfully!", "success");
     } catch (error) {
       console.error("Error updating lead:", error);
-      addToast("Failed to update lead", "error");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update lead";
+      
+      // Show specific error message from backend
+      if (errorMessage.includes("already exists") || errorMessage.includes("duplicate")) {
+        addToast(`Update failed: ${errorMessage}`, "error", 5000);
+      } else {
+        addToast(errorMessage, "error");
+      }
     }
   };
 
@@ -294,13 +308,42 @@ export default function LeadsPage() {
         // Call backend to clean the leads
         const cleanedData = await leadsApi.cleanLeads(importFile, importBatchId);
 
-        // Show preview with backend-cleaned data
-        setPreviewData({
-          cleaned_leads: cleanedData.cleaned_leads,
-          total_records: cleanedData.original_count,
-          invalid_rows: cleanedData.invalid_emails,
-          duplicates_removed: cleanedData.duplicates_removed,
-        });
+        // Check for duplicates against existing leads
+        const { data: { user } } = await createClient().auth.getUser();
+        if (user && cleanedData.cleaned_leads.length > 0) {
+          try {
+            const emails = cleanedData.cleaned_leads.map(lead => lead.email);
+            const duplicateCheck = await leadsApi.checkDuplicates(emails, user.id);
+            
+            setPreviewData({
+              cleaned_leads: cleanedData.cleaned_leads,
+              total_records: cleanedData.original_count,
+              invalid_rows: cleanedData.invalid_emails,
+              duplicates_removed: cleanedData.duplicates_removed,
+              duplicate_count: duplicateCheck.duplicate_count,
+              duplicate_details: duplicateCheck.duplicate_details.reduce((acc: any, dup) => {
+                acc[dup.email] = dup;
+                return acc;
+              }, {}),
+            });
+          } catch (dupError) {
+            console.warn("Could not check duplicates:", dupError);
+            // Fall back to original data without duplicate info
+            setPreviewData({
+              cleaned_leads: cleanedData.cleaned_leads,
+              total_records: cleanedData.original_count,
+              invalid_rows: cleanedData.invalid_emails,
+              duplicates_removed: cleanedData.duplicates_removed,
+            });
+          }
+        } else {
+          setPreviewData({
+            cleaned_leads: cleanedData.cleaned_leads,
+            total_records: cleanedData.original_count,
+            invalid_rows: cleanedData.invalid_emails,
+            duplicates_removed: cleanedData.duplicates_removed,
+          });
+        }
         setShowPreview(true);
         setShowImportModal(false);
       } else if (importMethod === "url" && googleSheetUrl) {
@@ -324,11 +367,16 @@ export default function LeadsPage() {
         // Refresh leads
         fetchLeads();
         
-        // Show success toast
-        addToast(
-          `Successfully imported ${result.stats.inserted} leads from Google Sheets!`,
-          "success"
-        );
+        // Show detailed success/warning toast based on backend message
+        if (result.message) {
+          const hasSkipped = (result.stats.skipped_duplicates || 0) > 0;
+          addToast(result.message, hasSkipped ? "info" : "success", hasSkipped ? 8000 : 4000);
+        } else {
+          addToast(
+            `Successfully imported ${result.stats.inserted} leads from Google Sheets!`,
+            "success"
+          );
+        }
 
         setShowImportModal(false);
         setGoogleSheetUrl("");
@@ -354,11 +402,16 @@ export default function LeadsPage() {
         // Refresh leads
         fetchLeads();
         
-        // Show success toast
-        addToast(
-          `Successfully extracted ${result.stats.inserted} leads from photo!`,
-          "success"
-        );
+        // Show detailed success/warning toast based on backend message
+        if (result.message) {
+          const hasSkipped = (result.stats.skipped_duplicates || 0) > 0;
+          addToast(result.message, hasSkipped ? "info" : "success", hasSkipped ? 8000 : 4000);
+        } else {
+          addToast(
+            `Successfully extracted ${result.stats.inserted} leads from photo!`,
+            "success"
+          );
+        }
 
         setShowImportModal(false);
         setImportFile(null);
@@ -366,7 +419,16 @@ export default function LeadsPage() {
       }
     } catch (error) {
       console.error("Error importing leads:", error);
-      addToast(error instanceof Error ? error.message : "Failed to process import", "error");
+      const errorMessage = error instanceof Error ? error.message : "Failed to process import";
+      
+      // Enhanced error handling for different types of import errors
+      if (errorMessage.includes("duplicate") || errorMessage.includes("already exists")) {
+        addToast(`Import failed: ${errorMessage}`, "error", 7000);
+      } else if (errorMessage.includes("Invalid") || errorMessage.includes("validation")) {
+        addToast(`Validation error: ${errorMessage}`, "error", 5000);
+      } else {
+        addToast(errorMessage, "error");
+      }
     } finally {
       setImporting(false);
     }
@@ -737,6 +799,38 @@ export default function LeadsPage() {
                   + {previewData.cleaned_leads.length - 10} more leads
                 </div>
               )}
+
+              {/* Duplicate Warning Section */}
+              {previewData.duplicate_count && previewData.duplicate_count > 0 && (
+                <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="text-yellow-400 mt-0.5" size={20} />
+                    <div className="flex-1">
+                      <h4 className="text-yellow-400 font-medium mb-2">
+                        ⚠️ Duplicate Detection ({previewData.duplicate_count} found)
+                      </h4>
+                      <p className="text-sm text-neutral-300 mb-3">
+                        The following emails already exist in your database and will be skipped:
+                      </p>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {previewData.duplicate_details && Object.values(previewData.duplicate_details).slice(0, 5).map((duplicate: any, index: number) => (
+                          <div key={index} className="text-xs text-yellow-300 bg-yellow-500/5 px-2 py-1 rounded">
+                            • {duplicate.email} (exists in batch "{duplicate.existing_batch}")
+                          </div>
+                        ))}
+                        {previewData.duplicate_details && Object.keys(previewData.duplicate_details).length > 5 && (
+                          <div className="text-xs text-yellow-400">
+                            ... and {Object.keys(previewData.duplicate_details).length - 5} more
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-neutral-400 mt-2">
+                        Only new, unique emails will be imported ({(previewData.cleaned_leads?.length || 0) - (previewData.duplicate_count || 0)} leads).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -791,7 +885,13 @@ export default function LeadsPage() {
                         setImportFile(null);
                         setGoogleSheetUrl("");
                         
-                        addToast(`✅ Successfully imported ${result.stats.inserted} leads!`, "success");
+                        // Show detailed success/warning message from backend
+                        if (result.message) {
+                          const hasSkipped = (result.stats.skipped_duplicates || 0) > 0;
+                          addToast(result.message, hasSkipped ? "info" : "success", hasSkipped ? 8000 : 4000);
+                        } else {
+                          addToast(`✅ Successfully imported ${result.stats.inserted} leads!`, "success");
+                        }
                       } catch (error) {
                         console.error("Error saving leads:", error);
                         addToast(`Failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error");

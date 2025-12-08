@@ -480,6 +480,29 @@ export default function EmailTriggerModal({
                   </div>
                 </div>
 
+                {/* Show enabled festivals summary */}
+                {Object.keys(festiveSettings).some(key => festiveSettings[key]) && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+                    <div className="flex items-start space-x-2">
+                      <div className="text-green-600 text-xl">✓</div>
+                      <div>
+                        <h4 className="font-medium text-green-900 mb-1">
+                          Active Festivals ({Object.values(festiveSettings).filter(Boolean).length})
+                        </h4>
+                        <p className="text-sm text-green-700">
+                          {FESTIVE_OCCASIONS
+                            .filter(f => festiveSettings[f.id])
+                            .map(f => f.name)
+                            .join(', ') || 'None'}
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          Emails will be sent automatically at 9:00 AM on these festival days.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {FESTIVE_OCCASIONS.map((festival) => (
                     <motion.div

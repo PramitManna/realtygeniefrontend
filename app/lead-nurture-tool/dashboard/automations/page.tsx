@@ -24,31 +24,33 @@ import {
   Loader,
 } from "lucide-react";
 
-interface Campaign {
+interface Batch {
   id: string;
-  batch_id: string;
-  name?: string;
+  batch_name: string;
+  description?: string;
   subject?: string;
   body?: string;
-  status: "active" | "paused" | "draft";
+  status: "active" | "paused" | "draft" | "inactive" | "completed";
   persona: string;
   objective: string;
   created_at?: string;
-  emailsSent?: number;
-  emailsTotal?: number;
+  lead_count: number;
+  emails_sent?: number;
+  total_recipients?: number;
+  tones: string[];
 }
 
 interface AutomationSetup {
-  campaignId: string;
+  batchId: string;
   draftEmails: any[];
   step: 1 | 2 | 3;
 }
 
 export default function AutomationsPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [showDraftReview, setShowDraftReview] = useState(false);
   const [draftEmails, setDraftEmails] = useState<any[]>([]);
   const [isGeneratingDrafts, setIsGeneratingDrafts] = useState(false);
@@ -57,6 +59,12 @@ export default function AutomationsPage() {
   const [automationStep, setAutomationStep] = useState(1);
   const [queueStats, setQueueStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [campaignStartDate, setCampaignStartDate] = useState<string>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    return tomorrow.toISOString().slice(0, 16);
+  });
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: "success" | "error" }>>([]);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -91,7 +99,7 @@ export default function AutomationsPage() {
         } = await supabase.auth.getUser();
 
         if (user) {
-          fetchCampaigns(user.id);
+          fetchBatches(user.id);
         }
       } catch (error) {
         console.error("Error initializing:", error);
@@ -101,37 +109,36 @@ export default function AutomationsPage() {
     initData();
   }, []);
 
-  const fetchCampaigns = async (userId: string) => {
+  const fetchBatches = async (userId: string) => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from("campaigns")
+        .from("batches")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setCampaigns(data || []);
-      console.log(data)
+      setBatches(data || []);
     } catch (error) {
-      console.error("Error fetching campaigns:", error);
-      showToast("Failed to load campaigns", "error");
+      console.error("Error fetching batches:", error);
+      showToast("Failed to load batches", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const generateDraftEmails = async (campaign: Campaign) => {
-    // Prevent generating drafts if campaign already launched
-    if (selectedCampaign?.status === 'active') {
-      showToast('Campaign already launched. Cannot generate new drafts.', 'error');
+  const generateDraftEmails = async (batch: Batch) => {
+    // Prevent generating drafts if batch already launched
+    if (selectedBatch?.status === 'active') {
+      showToast('Batch automation already launched. Cannot generate new drafts.', 'error');
       return;
     }
 
     setIsGeneratingDrafts(true);
     try {
-      // Get campaign ID - use name as fallback if ID not available
-      const campaignId = selectedCampaign?.id || selectedCampaign?.name || 'unknown';
+      // Get batch ID
+      const batchId = selectedBatch?.id || 'unknown';
 
       // Get user ID from auth session
       const { data: { user } } = await supabase.auth.getUser();
@@ -142,18 +149,17 @@ export default function AutomationsPage() {
       // Don't set a default target_city - let user choose or leave empty
       let target_city: string[] = [];
 
-      console.log(selectedCampaign)
 
       if (user) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('full_name, brokerage, markets')
+          .select('full_name, company_name, markets')
           .eq('id', user.id)
           .single();
 
         if (profileData) {
           agentName = profileData.full_name || agentName;
-          companyName = profileData.brokerage || companyName;
+          companyName = profileData.company_name || companyName;
           // Don't automatically use profile markets - user should specify target city
           // target_city = profileData.markets || target_city;
         }
@@ -161,17 +167,18 @@ export default function AutomationsPage() {
 
 
 
-      const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/campaigns/generate-drafts`, {
+      const response = await fetch('/api/campaigns/generate-drafts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          campaign_id: campaignId,
-          campaign_name: selectedCampaign?.name || 'Campaign',
+          campaign_id: batchId,
+          campaign_name: selectedBatch?.batch_name || 'Batch Automation',
           target_city: target_city.length > 0 ? target_city : ["your market"],
-          persona: selectedCampaign?.persona || 'buyer',
-          objective: selectedCampaign?.objective || 'lead_nurturing',
+          persona: selectedBatch?.persona || 'buyer',
+          objective: selectedBatch?.objective || 'lead_nurturing',
+          tones: selectedBatch?.tones,
           user_id: userId,
         }),
       });
@@ -282,8 +289,8 @@ export default function AutomationsPage() {
 
   const handleLaunchCampaign = async () => {
     try {
-      if (!selectedCampaign) {
-        showToast("Campaign not selected", "error");
+      if (!selectedBatch) {
+        showToast("Batch not selected", "error");
         return;
       }
 
@@ -310,7 +317,6 @@ export default function AutomationsPage() {
         month_number: email.month_number || 1,
       }));
 
-      console.log('Launching campaign with emails:', formattedEmails);
 
       // Call backend to save approved emails and queue them for sending
       const response = await fetch('/api/campaign-emails/save-approved', {
@@ -319,10 +325,10 @@ export default function AutomationsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          campaign_id: selectedCampaign.id,
+          campaign_id: selectedBatch.id,
           user_id: user.id,
           emails: formattedEmails,
-          campaign_start_date: new Date().toISOString(),
+          campaign_start_date: new Date(campaignStartDate).toISOString(),
         }),
       });
 
@@ -343,8 +349,8 @@ export default function AutomationsPage() {
       showToast("Campaign launched! Emails queued for sending.", "success");
 
       // Update the campaign status to 'active' in our local state
-      setCampaigns(campaigns.map(c =>
-        c.id === selectedCampaign.id
+      setBatches(batches.map((c: Batch) =>
+        c.id === selectedBatch.id
           ? { ...c, status: 'active' as const }
           : c
       ));
@@ -363,21 +369,20 @@ export default function AutomationsPage() {
     }
   };
 
-  const handleStartAutomation = (campaign: Campaign) => {
-    setSelectedCampaign(campaign);
+  const handleStartAutomation = (batch: Batch) => {
+    setSelectedBatch(batch);
     setAutomationStep(1);
 
-    // If campaign is active, fetch pending emails
-    if (campaign.status === 'active') {
-      fetchPendingEmails(campaign.id);
+    // If batch automation is active, fetch pending emails
+    if (batch.status === 'active') {
+      fetchPendingEmails(batch.id);
     }
   };
 
-  const fetchPendingEmails = async (campaignId: string) => {
+  const fetchPendingEmails = async (batchId: string) => {
     try {
       setIsLoadingStats(true);
-      console.log(`[DEBUG] Fetching pending emails for campaign ID: "${campaignId}"`);
-      const fullUrl = `${API_CONFIG.BACKEND_URL}/api/campaigns/queue-stats/${campaignId}`;
+      const fullUrl = `${API_CONFIG.BACKEND_URL}/api/batches/${batchId}/queue-stats`;
 
       const response = await axios.get(fullUrl);
 
@@ -389,7 +394,6 @@ export default function AutomationsPage() {
 
       // Format the pending emails for display
       const emailsList = data.pending_emails || [];
-      console.log(`Found ${emailsList.length} pending email types`);
 
       const formattedEmails = emailsList.map((email: any, idx: number) => ({
         id: `pending-${idx}`,
@@ -413,15 +417,15 @@ export default function AutomationsPage() {
 
 
   const resetAutomation = () => {
-    setSelectedCampaign(null);
+    setSelectedBatch(null);
     setDraftEmails([]);
     setShowDraftReview(false);
     setAutomationStep(1);
     setQueueStats(null);
   };
 
-  const filteredCampaigns = campaigns.filter((campaign) =>
-    (campaign.name || campaign.subject || "").toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredBatches = batches.filter((batch) =>
+    (batch.batch_name || batch.subject || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Toast Component
@@ -463,7 +467,7 @@ export default function AutomationsPage() {
           <div>
             <h1 className="text-4xl font-bold text-white">Email Automations</h1>
             <p className="text-neutral-400 mt-2">
-              Create and manage multi-touch email campaigns with AI-generated drafts
+              Create and manage multi-touch email automations with AI-generated drafts
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -482,7 +486,7 @@ export default function AutomationsPage() {
 
       {/* Main Content */}
       <AnimatePresence mode="wait">
-        {selectedCampaign && showDraftReview ? (
+        {selectedBatch && showDraftReview ? (
           // Draft Review View
           <motion.div
             key="draft-review"
@@ -556,7 +560,7 @@ export default function AutomationsPage() {
               />
             </motion.div>
           </motion.div>
-        ) : selectedCampaign ? (
+        ) : selectedBatch ? (
           // Automation Setup View
           <motion.div
             key="automation-setup"
@@ -589,37 +593,37 @@ export default function AutomationsPage() {
               className="bg-white/5 border border-white/10 rounded-xl p-6"
             >
               <h2 className="text-2xl font-bold text-white mb-4">
-                {selectedCampaign.name || selectedCampaign.subject || "Campaign Setup"}
+                {selectedBatch.batch_name || selectedBatch.subject || "Batch Automation Setup"}
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 rounded-lg p-4">
                   <p className="text-neutral-400 text-sm mb-1">Persona</p>
-                  <p className="text-white font-semibold break-words text-sm capitalize">{selectedCampaign.persona}</p>
+                  <p className="text-white font-semibold break-words text-sm capitalize">{selectedBatch.persona}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
                   <p className="text-neutral-400 text-sm mb-1">Objective</p>
-                  <p className="text-white font-semibold break-words text-sm">{selectedCampaign.objective}</p>
+                  <p className="text-white font-semibold break-words text-sm">{selectedBatch.objective}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
                   <p className="text-neutral-400 text-sm mb-1">Status</p>
-                  <p className={`font-semibold ${selectedCampaign.status === 'active'
+                  <p className={`font-semibold ${selectedBatch.status === 'active'
                       ? 'text-green-400'
-                      : selectedCampaign.status === 'paused'
+                      : selectedBatch.status === 'paused'
                         ? 'text-yellow-400'
                         : 'text-blue-400'
                     }`}>
-                    {selectedCampaign.status === 'active' ? 'Active' : selectedCampaign.status === 'paused' ? 'Paused' : 'Draft'}
+                    {selectedBatch.status === 'active' ? 'Active' : selectedBatch.status === 'paused' ? 'Paused' : 'Draft'}
                   </p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
-                  <p className="text-neutral-400 text-sm mb-1">Recipients</p>
-                  <p className="text-white font-semibold">{selectedCampaign.emailsTotal || "—"}</p>
+                  <p className="text-neutral-400 text-sm mb-1">Leads</p>
+                  <p className="text-white font-semibold">{selectedBatch.lead_count || "—"}</p>
                 </div>
               </div>
             </motion.div>
 
             {/* Pending Emails (if active) */}
-            {selectedCampaign.status === 'active' && (
+            {selectedBatch.status === 'active' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -692,7 +696,7 @@ export default function AutomationsPage() {
             )}
 
             {/* Steps (only show if campaign is not active) */}
-            {selectedCampaign.status !== 'active' && (
+            {selectedBatch.status !== 'active' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -801,7 +805,7 @@ export default function AutomationsPage() {
                           </div>
                           <div className="flex items-center gap-2 text-xs text-yellow-300/70">
                             <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
-                            Creating personalized content for {selectedCampaign?.persona || 'target audience'}
+                            Creating personalized content for {selectedBatch?.persona || 'target audience'}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-yellow-300/70">
                             <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
@@ -814,18 +818,18 @@ export default function AutomationsPage() {
                 )}
 
                 <motion.button
-                  whileHover={!isGeneratingDrafts && selectedCampaign?.status !== 'active' ? { scale: 1.02 } : {}}
-                  whileTap={!isGeneratingDrafts && selectedCampaign?.status !== 'active' ? { scale: 0.98 } : {}}
-                  onClick={() => generateDraftEmails(selectedCampaign)}
-                  disabled={automationStep > 1 || isGeneratingDrafts || selectedCampaign?.status === 'active'}
-                  className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${automationStep > 1 || isGeneratingDrafts || selectedCampaign?.status === 'active'
+                  whileHover={!isGeneratingDrafts && selectedBatch?.status !== 'active' ? { scale: 1.02 } : {}}
+                  whileTap={!isGeneratingDrafts && selectedBatch?.status !== 'active' ? { scale: 0.98 } : {}}
+                  onClick={() => generateDraftEmails(selectedBatch)}
+                  disabled={automationStep > 1 || isGeneratingDrafts || selectedBatch?.status === 'active'}
+                  className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${automationStep > 1 || isGeneratingDrafts || selectedBatch?.status === 'active'
                       ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
                       : "bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black"
                     }`}
                 >
                   {isGeneratingDrafts ? (
                     "Processing..."
-                  ) : selectedCampaign?.status === 'active' ? (
+                  ) : selectedBatch?.status === 'active' ? (
                     <>
                       <CheckCircle size={20} />
                       ✅ Campaign Already Launched
@@ -847,6 +851,44 @@ export default function AutomationsPage() {
 
             {automationStep === 3 && (
               <>
+                {/* Start Date Picker */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl p-6 mb-4"
+                >
+                  <h3 className="text-lg font-semibold text-blue-300 mb-2 flex items-center gap-2">
+                    <Calendar size={20} />
+                    Schedule Campaign Start
+                  </h3>
+                  <p className="text-neutral-400 text-sm mb-4">
+                    Choose when to begin sending emails. The first email will be sent on this date, and subsequent emails will follow the schedule.
+                  </p>
+                  <div className="space-y-2">
+                    <label htmlFor="startDate" className="text-sm text-neutral-300 font-medium">
+                      Start Date & Time
+                    </label>
+                    <input
+                      id="startDate"
+                      type="datetime-local"
+                      value={campaignStartDate}
+                      onChange={(e) => setCampaignStartDate(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                    />
+                    <p className="text-xs text-neutral-500">
+                      First email sends on {new Date(campaignStartDate).toLocaleString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </motion.div>
+
                 {/* Campaign Launch Loading State */}
                 {isLaunchingCampaign && (
                   <motion.div
@@ -918,7 +960,7 @@ export default function AutomationsPage() {
                 <Search className="absolute left-3 top-3 text-neutral-500" size={20} />
                 <input
                   type="text"
-                  placeholder="Search campaigns..."
+                  placeholder="Search batches..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
@@ -940,41 +982,41 @@ export default function AutomationsPage() {
                     className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full"
                   />
                   <div className="text-center">
-                    <p className="text-white font-medium mb-1">Loading Your Campaigns</p>
-                    <p className="text-neutral-400 text-sm">Fetching campaign data and statistics...</p>
+                    <p className="text-white font-medium mb-1">Loading Your Batches</p>
+                    <p className="text-neutral-400 text-sm">Fetching batch data and statistics...</p>
                   </div>
                 </motion.div>
               </div>
-            ) : filteredCampaigns.length === 0 ? (
+            ) : filteredBatches.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="bg-white/5 border border-dashed border-white/20 rounded-xl p-12 text-center"
               >
                 <Mail size={48} className="mx-auto text-neutral-600 mb-4" />
-                <h3 className="text-lg font-semibold text-white mb-2">No campaigns found</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">No batches found</h3>
                 <p className="text-neutral-400">
-                  Create campaigns from the Campaigns page to set up automations
+                  Create batches from the Batches page to set up automations
                 </p>
               </motion.div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredCampaigns.map((campaign, idx) => (
+                {filteredBatches.map((batch, idx) => (
                   <motion.div
-                    key={campaign.id}
+                    key={batch.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.1 }}
                     whileHover={{ y: -4 }}
-                    onClick={() => handleStartAutomation(campaign)}
+                    onClick={() => handleStartAutomation(batch)}
                     className="bg-white/5 border border-white/10 rounded-xl p-6 cursor-pointer hover:border-[var(--color-gold)]/50 transition-all group"
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h3 className="text-lg font-bold text-white group-hover:text-[var(--color-gold)] transition-colors line-clamp-2">
-                          {campaign.name || campaign.subject || "Untitled Campaign"}
+                          {batch.batch_name || batch.subject || "Untitled Batch"}
                         </h3>
-                        <p className="text-sm text-neutral-400 mt-1">{campaign.objective}</p>
+                        <p className="text-sm text-neutral-400 mt-1">{batch.objective}</p>
                       </div>
                       <motion.div
                         whileHover={{ rotate: -45 }}
@@ -987,26 +1029,26 @@ export default function AutomationsPage() {
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center gap-2 text-sm text-neutral-400">
                         <Zap size={16} />
-                        <span className="capitalize">{campaign.persona}</span>
+                        <span className="capitalize">{batch.persona}</span>
                       </div>
-                      {campaign.emailsTotal && (
+                      {batch.lead_count > 0 && (
                         <div className="flex items-center gap-2 text-sm text-neutral-400">
                           <Users size={16} />
-                          <span>{campaign.emailsTotal} recipients</span>
+                          <span>{batch.lead_count} leads</span>
                         </div>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2 pt-4 border-t border-white/10">
                       <div
-                        className={`w-2 h-2 rounded-full ${campaign.status === "active"
+                        className={`w-2 h-2 rounded-full ${batch.status === "active"
                             ? "bg-green-400"
-                            : campaign.status === "paused"
+                            : batch.status === "paused"
                               ? "bg-yellow-400"
                               : "bg-gray-400"
                           }`}
                       />
-                      <span className="text-xs text-neutral-400 capitalize">{campaign.status}</span>
+                      <span className="text-xs text-neutral-400 capitalize">{batch.status}</span>
                     </div>
                   </motion.div>
                 ))}
@@ -1033,3 +1075,4 @@ export default function AutomationsPage() {
     </div>
   );
 }
+

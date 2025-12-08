@@ -1,35 +1,29 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { Upload, Building2, MessageSquare, Check, Mail, Trash2, MapPin, Home, X, Eye, EyeOff } from "lucide-react";
+import { Upload, Building2, Check, MapPin, Home, X, Phone, Mail, Calendar, Sparkles } from "lucide-react";
 import Image from "next/image";
-import { motion } from "framer-motion";
-import { searchCities, CANADIAN_CITIES } from "@/utils/cities";
+import { searchCities } from "@/utils/cities";
 import AddressAutocomplete from "@/components/AddressInput";
 
 interface OnboardingData {
-  avatar_url: string | null;
-  brokerage: string;
   phone: string;
   email: string;
   address: string;
   years_in_business: string;
-  signature_block: string | null;
-  signature_image_url: string | null;
+  calendly_link: string;
+  company_name: string;
   markets: string[];
-  property_types: string[];
-  description: string;
-  password: string;
-  confirmPassword: string;
+  realtor_type: "solo" | "team" | "";
+  brokerage_logo_url: string | null;
+  brand_logo_url: string | null;
+  brokerage_name: string;
 }
 
-const propertyTypes = ["Residential", "Commercial", "Industrial", "Mixed-Use", "Vacant Land", "Multi-Family"];
-
-// Canadian phone number validation - accepts all common formats
-// Format: (XXX) XXX-XXXX, XXX-XXX-XXXX, XXXXXXXXXX, +1-XXX-XXX-XXXX, +1 (XXX) XXX-XXXX, etc.
-const CANADIAN_PHONE_REGEX = /^(\+?1[-.\s]?)?\(?([2-9]\d{2})\)?[-.\s]?([2-9]\d{2})[-.\s]?(\d{4})$/;
+// Canadian phone number validation
+const CANADIAN_PHONE_REGEX = /^\d{10}$/;
 
 const validateCanadianPhone = (phone: string): { valid: boolean; message: string } => {
   if (!phone || phone.trim().length === 0) {
@@ -37,7 +31,7 @@ const validateCanadianPhone = (phone: string): { valid: boolean; message: string
   }
 
   if (!CANADIAN_PHONE_REGEX.test(phone)) {
-    return { valid: false, message: "Invalid phone format. Use: (XXX) XXX-XXXX or XXX-XXX-XXXX" };
+    return { valid: false, message: "Please enter exactly 10 digits" };
   }
 
   return { valid: true, message: "Valid phone number" };
@@ -46,34 +40,31 @@ const validateCanadianPhone = (phone: string): { valid: boolean; message: string
 export default function OnboardingPageV2() {
   const router = useRouter();
   const supabase = createClient();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [signatureImagePreview, setSignatureImagePreview] = useState<string | null>(null);
-  const [isOAuthUser, setIsOAuthUser] = useState(false);
-  const [totalSteps, setTotalSteps] = useState(8);
+  const [brokerageLogoPreview, setBrokerageLogoPreview] = useState<string | null>(null);
+  const [brandLogoPreview, setBrandLogoPreview] = useState<string | null>(null);
+  const totalSteps = 4;
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [filteredCities, setFilteredCities] = useState<string[]>([]);
-  const [showPassword, setShowPassword] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [phoneValid, setPhoneValid] = useState(false);
+  const [calendlyError, setCalendlyError] = useState("");
+  const [calendlyValid, setCalendlyValid] = useState(false);
 
   const [formData, setFormData] = useState<OnboardingData>({
-    avatar_url: null,
-    brokerage: "",
     phone: "",
     email: "",
     address: "",
     years_in_business: "0",
-    signature_block: null,
-    signature_image_url: null,
+    calendly_link: "",
+    company_name: "",
     markets: [],
-    property_types: [],
-    description: "",
-    password: "",
-    confirmPassword: "",
+    realtor_type: "",
+    brokerage_logo_url: null,
+    brand_logo_url: null,
+    brokerage_name: "",
   });
 
   // Update filtered cities when search query changes
@@ -82,38 +73,32 @@ export default function OnboardingPageV2() {
   }, [citySearchQuery]);
 
   useEffect(() => {
-    const checkAuthProvider = async () => {
+    const loadUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const providers = user.app_metadata?.providers || [];
-        const hasProvider = providers.length > 0;
-        const isOAuth = hasProvider && !providers.includes('email');
-        setIsOAuthUser(isOAuth);
-        setTotalSteps(isOAuth ? 8 : 7);
-
-        // Set default avatar with initials
-        const userName = user.user_metadata?.full_name || user.email || "U";
-        const initial = userName.charAt(0).toUpperCase();
-        const defaultAvatar = `https://ui-avatars.com/api/?name=${initial}&background=D4AF37&color=000&size=200&font-size=0.4`;
-
-        setAvatarPreview(defaultAvatar);
         setFormData(prev => ({
           ...prev,
           email: user.email || "",
-          avatar_url: defaultAvatar
         }));
       }
     };
-    checkAuthProvider();
+    loadUserData();
   }, [supabase]);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "brokerage" | "brand"
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setAvatarPreview(reader.result as string);
+      if (type === "brokerage") {
+        setBrokerageLogoPreview(reader.result as string);
+      } else {
+        setBrandLogoPreview(reader.result as string);
+      }
     };
     reader.readAsDataURL(file);
 
@@ -122,8 +107,8 @@ export default function OnboardingPageV2() {
       if (!user) return;
 
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${type}-logo-${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -135,9 +120,13 @@ export default function OnboardingPageV2() {
         .from('avatars')
         .getPublicUrl(filePath);
 
-      setFormData({ ...formData, avatar_url: publicUrl });
+      if (type === "brokerage") {
+        setFormData({ ...formData, brokerage_logo_url: publicUrl });
+      } else {
+        setFormData({ ...formData, brand_logo_url: publicUrl });
+      }
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      console.error('Error uploading logo:', error);
     }
   };
 
@@ -159,25 +148,17 @@ export default function OnboardingPageV2() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      if (isOAuthUser && formData.password) {
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: formData.password
-        });
-        if (passwordError) throw passwordError;
-      }
-
       const profileData: any = {
-        password: formData.password,
-        avatar_url: formData.avatar_url,
-        brokerage: formData.brokerage,
         phone: formData.phone,
         address: formData.address,
         years_in_business: parseInt(formData.years_in_business) || 0,
-        signature_block: formData.signature_block,
-        signature_image_url: formData.signature_image_url,
+        calendly_link: formData.calendly_link,
+        company_name: formData.company_name,
         markets: formData.markets,
-        property_types: formData.property_types,
-        description: formData.description,
+        realtor_type: formData.realtor_type,
+        brokerage_logo_url: formData.brokerage_logo_url,
+        brand_logo_url: formData.brand_logo_url,
+        brokerage_name: formData.brokerage_name,
         onboarding_completed: true,
       };
 
@@ -200,34 +181,70 @@ export default function OnboardingPageV2() {
     }
   };
 
-  const nextStep = () => {
-    if (isOAuthUser && currentStep === 1) {
-      if (!formData.password || !formData.confirmPassword) {
-        alert("Please enter a password");
-        return;
+  const validateStep = () => {
+    if (currentStep === 1) {
+      if (!phoneValid) {
+        alert("Please enter a valid Canadian phone number");
+        return false;
       }
-      if (formData.password.length < 8) {
-        alert("Password must be at least 8 characters");
-        return;
+      if (!formData.email.trim()) {
+        alert("Please enter your email");
+        return false;
       }
-      if (formData.password !== formData.confirmPassword) {
-        alert("Passwords do not match");
-        return;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        alert("Please enter a valid email address");
+        return false;
+      }
+      // Check Calendly link if provided
+      if (formData.calendly_link && !calendlyValid) {
+        alert("Please enter a valid Calendly link or leave it empty");
+        return false;
       }
     }
+    
+    if (currentStep === 2) {
+      if (!formData.company_name.trim()) {
+        alert("Please enter your company name");
+        return false;
+      }
+      if (formData.markets.length === 0) {
+        alert("Please add at least one market/city");
+        return false;
+      }
+    }
+
+    if (currentStep === 3) {
+      if (!formData.realtor_type) {
+        alert("Please select whether you're a solo realtor or part of a team brand");
+        return false;
+      }
+      if (formData.realtor_type === "solo" && !formData.brokerage_logo_url) {
+        alert("Please upload your brokerage logo");
+        return false;
+      }
+      if (formData.realtor_type === "team") {
+        if (!formData.brand_logo_url) {
+          alert("Please upload your brand logo");
+          return false;
+        }
+        if (!formData.brokerage_name.trim()) {
+          alert("Please enter your brokerage name");
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const nextStep = () => {
+    if (!validateStep()) return;
 
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
       handleSubmit();
-    }
-  };
-
-  const togglePropertyType = (type: string) => {
-    if (formData.property_types.includes(type)) {
-      setFormData({ ...formData, property_types: formData.property_types.filter(p => p !== type) });
-    } else {
-      setFormData({ ...formData, property_types: [...formData.property_types, type] });
     }
   };
 
@@ -237,249 +254,127 @@ export default function OnboardingPageV2() {
     }
   };
 
-  const getStepNumber = (baseStep: number) => isOAuthUser ? baseStep : baseStep - 1;
-
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full">
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-2xl font-[var(--font-heading)] text-white">
-              Welcome to RealtyGenie
-            </h2>
-            <span className="text-neutral-400 text-sm">
-              Step {currentStep} of {totalSteps}
-            </span>
-          </div>
-          <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-gold-soft)] transition-all duration-300"
-              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-            />
-          </div>
+    <div className="min-h-screen flex flex-col-reverse lg:flex-row relative">
+      {/* Premium Background Effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-neutral-900 to-black" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_30%,rgba(212,175,55,0.02),transparent_10%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_20%,rgba(212,175,55,0.01),transparent_10%)]" />
+      
+      {/* Left Side - Premium Illustration */}
+      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 sticky top-0 h-screen">
+        {/* Animated Golden Waves */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-20 w-24 h-24 bg-[#D4AF37] rounded-full opacity-0.5 blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-20 w-24 h-24 bg-[#D4AF37] rounded-full opacity-0.5 blur-3xl animate-pulse delay-1000" />
         </div>
 
-        {/* Step Content */}
-        <div className="bg-[#1A1A1A] rounded-xl p-8 border border-neutral-800 max-h-[80vh] overflow-y-auto">
-          {/* Step 1: Password (OAuth only) */}
-          {isOAuthUser && currentStep === 1 && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-gold)]/10 mb-4">
-                  <Check className="w-8 h-8 text-[var(--color-gold)]" />
-                </div>
-                <h3 className="text-2xl font-semibold text-white mb-2">Set Your Password</h3>
-                <p className="text-neutral-400">Create a secure password for your account</p>
+        {/* Content */}
+        <div className="relative z-10 max-w-lg space-y-8">
+          {/* Logo/Brand */}
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#F4E5B8] flex items-center justify-center">
+                <Sparkles className="w-7 h-7 text-black" />
               </div>
+              <h1 className="text-4xl font-serif font-bold text-white tracking-tight">
+                RealtyGenie
+              </h1>
+            </div>
+            <h2 className="text-5xl font-serif font-bold text-white leading-tight">
+              Elevate Your<br />Real Estate Business
+            </h2>
+            <p className="text-lg text-neutral-400 leading-relaxed">
+              Join the elite platform trusted by top realtors. Automate your workflow, 
+              nurture leads intelligently, and close deals faster with AI-powered precision.
+            </p>
+          </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-neutral-400 text-sm mb-2">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="Enter a strong password"
-                      className="w-full px-4 py-3 pr-12 bg-[#111111] border border-neutral-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-[var(--color-gold)] transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors"
-                    >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
-                </div>
+          {/* Premium Features */}
+          <div className="space-y-4 pt-8">
+            {[
+              "AI-Powered Lead Nurturing",
+              "Automated Email Campaigns", 
+              "Smart Analytics Dashboard",
+              "Premium CRM Integration"
+            ].map((feature, i) => (
+              <div key={i} className="flex items-center gap-3 group">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] group-hover:scale-150 transition-transform" />
+                <span className="text-neutral-300 group-hover:text-white transition-colors">{feature}</span>
+              </div>
+            ))}
+          </div>
 
-                <div>
-                  <label className="block text-neutral-400 text-sm mb-2">Confirm Password</label>
-                  <input
-                    type="text"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    placeholder="Confirm your password"
-                    className="w-full px-4 py-3 bg-[#111111] border border-neutral-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-[var(--color-gold)] transition-colors"
-                  />
-                </div>
+          {/* Decorative Elements */}
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 border border-[#D4AF37]/10 rounded-full" />
+          <div className="absolute -top-20 -right-20 w-96 h-96 border border-[#D4AF37]/5 rounded-full" />
+        </div>
+      </div>
+
+      {/* Right Side - Premium Form */}
+      <div className="w-full lg:w-1/2 relative flex items-start justify-center p-4 lg:p-8 overflow-y-auto">
+        {/* Glassmorphic Card */}
+        <div className="w-full max-w-lg relative my-auto">
+          {/* Progress Indicator */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Step {currentStep} of {totalSteps}</p>
+                <h3 className="text-xl font-serif font-semibold text-white">
+                  {currentStep === 1 && "Personal Information"}
+                  {currentStep === 2 && "Company & Markets"}
+                  {currentStep === 3 && "Branding"}
+                  {currentStep === 4 && "Review & Confirm"}
+                </h3>
               </div>
             </div>
-          )}
-
-          {/* Step 2: Avatar */}
-          {currentStep === getStepNumber(2) && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-gold)]/10 mb-4">
-                  <Upload className="w-8 h-8 text-[var(--color-gold)]" />
-                </div>
-                <h3 className="text-2xl font-semibold text-white mb-2">Upload Your Photo</h3>
-                <p className="text-neutral-400">Add a professional photo to personalize your profile</p>
-              </div>
-
-              <div className="flex flex-col items-center gap-4">
-                {avatarPreview ? (
-                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-[var(--color-gold)]">
-                    <Image src={avatarPreview} alt="Avatar preview" fill className="object-cover" />
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 rounded-full bg-neutral-800 flex items-center justify-center border-2 border-dashed border-neutral-700">
-                    <Upload className="w-12 h-12 text-neutral-600" />
-                  </div>
-                )}
-
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                  />
-                  <span className="px-6 py-2 bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black font-medium rounded-lg transition-colors inline-block">
-                    Choose Photo
-                  </span>
-                </label>
-              </div>
+            
+            {/* Stepped Progress */}
+            <div className="flex gap-2">
+              {[1, 2, 3, 4].map((step) => (
+                <div
+                  key={step}
+                  className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                    step <= currentStep
+                      ? "bg-gradient-to-r from-[#D4AF37] to-[#F4E5B8] shadow-[0_0_8px_rgba(212,175,55,0.3)]"
+                      : "bg-neutral-800"
+                  }`}
+                />
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* Step 3: Email Signature */}
-          {currentStep === getStepNumber(3) && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-gold)]/10 mb-4">
-                  <Mail className="w-8 h-8 text-[var(--color-gold)]" />
-                </div>
-                <h3 className="text-2xl font-semibold text-white mb-2">Email Signature</h3>
-                <p className="text-neutral-400">Add a professional email signature (text and/or image)</p>
-              </div>
-
-              <div className="space-y-6">
-                {/* Text Signature */}
+          {/* Glassmorphic Form Card */}
+          <div className="relative rounded-3xl p-6 lg:p-8 backdrop-blur-xl bg-white/[0.02] border border-white/10 shadow-2xl">
+            {/* Golden Accent Border */}
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#D4AF37]/10 via-transparent to-[#D4AF37]/5 opacity-30 pointer-events-none" />
+            <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-br from-[#D4AF37]/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 blur-sm transition-opacity pointer-events-none" />
+            
+            {/* Content Wrapper */}
+            <div className="relative z-10">
+              {/* Step 1: Personal Information */}
+          {currentStep === 1 && (
+            <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-neutral-400 text-sm mb-2">Signature Block (optional)</label>
-                  <textarea
-                    value={formData.signature_block || ""}
-                    onChange={(e) => setFormData({ ...formData, signature_block: e.target.value })}
-                    placeholder="e.g., John Smith&#10;Real Estate Agent&#10;Coldwell Banker&#10;Phone: (555) 123-4567&#10;Email: john@example.com&#10;Website: www.johnsmith.ca"
-                    rows={5}
-                    className="w-full px-4 py-3 bg-[#111111] border border-neutral-700 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)] transition-colors resize-none"
-                  />
-                  <p className="text-xs text-neutral-500 mt-1">
-                    This signature will be added to automated emails sent to your leads
-                  </p>
-                </div>
-
-                {formData.signature_block && (
-                  <div className="p-4 bg-neutral-900 rounded-lg border border-neutral-700">
-                    <p className="text-xs text-neutral-400 mb-2">Text Preview:</p>
-                    <div className="text-sm text-neutral-300 whitespace-pre-wrap font-mono">
-                      {formData.signature_block}
-                    </div>
-                  </div>
-                )}
-
-                {/* Image Signature */}
-                <div className="pt-4 border-t border-neutral-700">
-                  <label className="block text-neutral-400 text-sm mb-2">Signature Image (optional)</label>
-                  <div className="flex flex-col gap-4">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setSignatureImagePreview(reader.result as string);
-                        };
-                        reader.readAsDataURL(file);
-
-                        try {
-                          const { data: { user } } = await supabase.auth.getUser();
-                          if (!user) return;
-
-                          const fileExt = file.name.split('.').pop();
-                          const fileName = `signature-${user.id}-${Math.random()}.${fileExt}`;
-                          const filePath = `signatures/${fileName}`;
-
-                          const { error: uploadError } = await supabase.storage
-                            .from('signatures')
-                            .upload(filePath, file);
-
-                          if (uploadError) throw uploadError;
-
-                          const { data: { publicUrl } } = supabase.storage
-                            .from('signatures')
-                            .getPublicUrl(filePath);
-
-                          setFormData({ ...formData, signature_image_url: publicUrl });
-                        } catch (error) {
-                          console.error('Error uploading signature image:', error);
-                        }
-                      }}
-                      className="block w-full text-sm text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-gold)] file:text-black hover:file:opacity-80 cursor-pointer"
-                    />
-                    <p className="text-xs text-neutral-500">
-                      Upload a PNG or JPG image of your signature (recommended: transparent background, max 2MB)
-                    </p>
-                  </div>
-
-                  {signatureImagePreview && (
-                    <div className="mt-4 p-4 bg-neutral-900 rounded-lg border border-neutral-700">
-                      <p className="text-xs text-neutral-400 mb-3">Image Preview:</p>
-                      <div className="flex justify-center">
-                        <img 
-                          src={signatureImagePreview} 
-                          alt="Signature preview" 
-                          className="max-h-32 object-contain"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Business Info */}
-          {currentStep === getStepNumber(4) && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-gold)]/10 mb-4">
-                  <Building2 className="w-8 h-8 text-[var(--color-gold)]" />
-                </div>
-                <h3 className="text-2xl font-semibold text-white mb-2">Business Information</h3>
-                <p className="text-neutral-400">Tell us about your real estate business</p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-neutral-400 text-sm mb-2">Brokerage/Company Name</label>
-                  <input
-                    type="text"
-                    value={formData.brokerage}
-                    onChange={(e) => setFormData({ ...formData, brokerage: e.target.value })}
-                    placeholder="e.g., Coldwell Banker"
-                    className="w-full px-4 py-3 bg-[#111111] border border-neutral-800 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-400 text-sm mb-2">Phone Number</label>
+                  <label className="block text-neutral-400 text-xs mb-1.5">Phone Number</label>
                   <div className="relative">
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => {
-                        const newPhone = e.target.value;
+                        let newPhone = e.target.value;
+                        
+                        // Allow only digits
+                        newPhone = newPhone.replace(/\D/g, '');
+                        
+                        // Limit to 10 digits
+                        if (newPhone.length > 10) {
+                          return;
+                        }
+                        
                         setFormData({ ...formData, phone: newPhone });
                         
-                        // Validate in real-time
                         if (newPhone.trim().length > 0) {
                           const validation = validateCanadianPhone(newPhone);
                           setPhoneValid(validation.valid);
@@ -489,39 +384,32 @@ export default function OnboardingPageV2() {
                           setPhoneError("");
                         }
                       }}
-                      placeholder="+1 (555) 123-4567"
-                      className={`w-full px-4 py-3 bg-[#111111] border rounded-lg text-white placeholder:text-neutral-500 focus:outline-none transition-colors ${
+                      maxLength={10}
+                      className={`w-full px-3 py-2.5 bg-[#111111] border rounded-lg text-white text-sm placeholder:text-neutral-500 focus:outline-none transition-colors ${
                         formData.phone && !phoneValid
                           ? "border-red-500/50 focus:border-red-500/70"
-                          : formData.phone && phoneValid
-                          ? "border-green-500/50 focus:border-green-500/70"
-                          : "border-neutral-800 focus:border-[var(--color-gold)]/50"
+                          : ""
                       }`}
                     />
-                    {formData.phone && (
-                      <div className="absolute right-3 top-3">
-                        {phoneValid ? (
-                          <Check className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <X className="w-5 h-5 text-red-500" />
-                        )}
-                      </div>
-                    )}
                   </div>
                   {phoneError && (
                     <p className="text-xs text-red-400 mt-1">{phoneError}</p>
                   )}
-                  {phoneValid && (
-                    <p className="text-xs text-green-400 mt-1">✓ Valid Canadian phone number</p>
-                  )}
-                  <p className="text-xs text-neutral-500 mt-1">
-                    Format: (XXX) XXX-XXXX, XXX-XXX-XXXX, or +1-XXX-XXX-XXXX
-                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-neutral-400 text-sm mb-2">Address</label>
+                  <label className="block text-neutral-400 text-xs mb-1.5">Professional Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="john@realestate.com"
+                    className="w-full px-3 py-2.5 bg-[#111111] border border-neutral-800 rounded-lg text-white text-sm placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
+                  />
+                </div>
 
+                <div>
+                  <label className="block text-neutral-400 text-xs mb-1.5">Address</label>
                   <AddressAutocomplete
                     value={formData.address}
                     onChange={(value: string) =>
@@ -531,7 +419,9 @@ export default function OnboardingPageV2() {
                 </div>
 
                 <div>
-                  <label className="block text-neutral-400 text-sm mb-2">Years in Business: <span className="text-[var(--color-gold)] font-semibold">{formData.years_in_business}</span> years</label>
+                  <label className="block text-neutral-400 text-xs mb-1.5">
+                    Years in Business: <span className="text-[var(--color-gold)] font-semibold">{formData.years_in_business}</span> years
+                  </label>
                   <input
                     type="range"
                     min="0"
@@ -545,54 +435,66 @@ export default function OnboardingPageV2() {
                     <span>40</span>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Step 5: Property Types */}
-          {currentStep === getStepNumber(5) && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-gold)]/10 mb-4">
-                  <Home className="w-8 h-8 text-[var(--color-gold)]" />
-                </div>
-                <h3 className="text-2xl font-semibold text-white mb-2">Property Types</h3>
-                <p className="text-neutral-400">What types of properties do you specialize in?</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {propertyTypes.map(type => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => togglePropertyType(type)}
-                    className={`px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${formData.property_types.includes(type)
-                        ? "border-[var(--color-gold)] bg-[var(--color-gold)]/10 text-white"
-                        : "border-neutral-700 bg-[#111111] text-neutral-400 hover:border-neutral-600"
+                <div>
+                  <label className="block text-neutral-400 text-xs mb-1.5">Calendly Link (Optional)</label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={formData.calendly_link}
+                      onChange={(e) => {
+                        const newLink = e.target.value;
+                        setFormData({ ...formData, calendly_link: newLink });
+                        
+                        if (newLink.trim().length > 0) {
+                          // Check if it's a valid Calendly URL
+                          const calendlyPattern = /^https?:\/\/(www\.)?calendly\.com\/[a-zA-Z0-9_-]+(\/[a-zA-Z0-9_-]+)?$/;
+                          if (calendlyPattern.test(newLink)) {
+                            setCalendlyValid(true);
+                            setCalendlyError("");
+                          } else {
+                            setCalendlyValid(false);
+                            setCalendlyError("Please enter a valid Calendly link (e.g., https://calendly.com/your-name)");
+                          }
+                        } else {
+                          setCalendlyValid(false);
+                          setCalendlyError("");
+                        }
+                      }}
+                      placeholder="https://calendly.com/your-link"
+                      className={`w-full px-3 py-2.5 bg-[#111111] border rounded-lg text-white text-sm placeholder:text-neutral-500 focus:outline-none transition-colors ${
+                        formData.calendly_link && !calendlyValid
+                          ? "border-red-500/50 focus:border-red-500/70"
+                          : ""
                       }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+                    />
+                  </div>
+                  {calendlyError && (
+                    <p className="text-xs text-red-400 mt-1">{calendlyError}</p>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Step 6: Markets/Cities with Searchable Dropdown */}
-          {currentStep === getStepNumber(6) && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-gold)]/10 mb-4">
-                  <MapPin className="w-8 h-8 text-[var(--color-gold)]" />
+          {/* Step 2: Company & Markets */}
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-neutral-400 text-xs mb-1.5">Company Name</label>
+                  <input
+                    type="text"
+                    value={formData.company_name}
+                    onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                    placeholder="e.g., Smith Real Estate"
+                    className="w-full px-3 py-2.5 bg-[#111111] border border-neutral-800 rounded-lg text-white text-sm placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
+                  />
                 </div>
-                <h3 className="text-2xl font-semibold text-white mb-2">Markets/Cities</h3>
-                <p className="text-neutral-400">Which Canadian cities do you operate in?</p>
-              </div>
 
-              <div className="space-y-4">
                 {/* City Search Dropdown */}
                 <div className="relative">
-                  <label className="block text-neutral-400 text-sm mb-2">Search & Add Cities</label>
+                  <label className="block text-neutral-400 text-xs mb-1.5">Markets/Cities</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -600,7 +502,7 @@ export default function OnboardingPageV2() {
                       onChange={(e) => setCitySearchQuery(e.target.value)}
                       onFocus={() => setShowCityDropdown(true)}
                       placeholder="Type city name (e.g., Toronto, Vancouver)..."
-                      className="w-full px-4 py-3 bg-[#111111] border border-neutral-800 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
+                      className="w-full px-3 py-2.5 bg-[#111111] border border-neutral-800 rounded-lg text-white text-sm placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
                     />
 
                     {/* Dropdown List */}
@@ -616,12 +518,6 @@ export default function OnboardingPageV2() {
                             {city}
                           </button>
                         ))}
-                      </div>
-                    )}
-
-                    {showCityDropdown && citySearchQuery && filteredCities.length === 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-[#111111] border border-neutral-700 rounded-lg p-4 z-50">
-                        <p className="text-neutral-500 text-sm">No cities found. Try another search.</p>
                       </div>
                     )}
                   </div>
@@ -654,47 +550,196 @@ export default function OnboardingPageV2() {
             </div>
           )}
 
-          {/* Step 7: Description */}
-          {currentStep === getStepNumber(7) && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-gold)]/10 mb-4">
-                  <MessageSquare className="w-8 h-8 text-[var(--color-gold)]" />
+          {/* Step 3: Realtor Type & Branding */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              <div className="space-y-4">
+                {/* Realtor Type Selection */}
+                <div>
+                  <label className="block text-neutral-400 text-xs mb-1.5">Realtor Type</label>
+                  <select
+                    value={formData.realtor_type}
+                    onChange={(e) => setFormData({ ...formData, realtor_type: e.target.value as "solo" | "team" | "" })}
+                    className="w-full px-3 py-2.5 bg-[#111111] border border-neutral-800 rounded-lg text-white text-sm focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
+                  >
+                    <option hidden selected value="">Select your type</option>
+                    <option value="solo">Solo Realtor</option>
+                    <option value="team">Team Brand</option>
+                  </select>
                 </div>
-                <h3 className="text-2xl font-semibold text-white mb-2">About You</h3>
-                <p className="text-neutral-400">Tell us about yourself (max 500 characters)</p>
+
+                {/* Conditional Content - Fixed Height Container */}
+                <div className="min-h-[250px]">
+                {/* Solo Realtor - Brokerage Logo */}
+                {formData.realtor_type === "solo" && (
+                  <div className="space-y-4 p-6 bg-[#111111] rounded-lg border border-neutral-700">
+                    <label className="block text-neutral-400 text-sm mb-2">Upload Brokerage Logo</label>
+                    
+                    <label className="cursor-pointer block">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleLogoUpload(e, "brokerage")}
+                        className="hidden"
+                      />
+                      {brokerageLogoPreview ? (
+                        <div className="relative w-full h-40 rounded-lg overflow-hidden border-2 border-[var(--color-gold)] bg-white flex items-center justify-center hover:opacity-90 transition-opacity">
+                          <Image 
+                            src={brokerageLogoPreview} 
+                            alt="Brokerage logo preview" 
+                            fill 
+                            className="object-contain p-4"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full h-40 rounded-lg bg-neutral-800 flex items-center justify-center border-2 border-dashed border-neutral-700 hover:border-[var(--color-gold)]/50 transition-colors">
+                          <div className="text-center">
+                            <Upload className="w-12 h-12 text-neutral-600 mx-auto mb-2" />
+                            <p className="text-neutral-500 text-sm">Click to upload your brokerage logo</p>
+                          </div>
+                        </div>
+                      )}
+                    </label>
+
+                    <div>
+                      <label className="block text-neutral-400 text-sm mb-2">Brokerage Name</label>
+                      <input
+                        type="text"
+                        value={formData.brokerage_name}
+                        disabled
+                        placeholder="Not required for solo realtors"
+                        className="w-full px-3 py-2.5 bg-neutral-900 border border-neutral-800 rounded-lg text-neutral-500 text-sm placeholder:text-neutral-600 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Team Brand - Brand Logo & Brokerage Name */}
+                {formData.realtor_type === "team" && (
+                  <div className="space-y-4">
+                    <div className="p-6 bg-[#111111] rounded-lg border border-neutral-700">
+                      <label className="block text-neutral-400 text-sm mb-2">Upload Brand Logo</label>
+                      
+                      <label className="cursor-pointer block">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleLogoUpload(e, "brand")}
+                          className="hidden"
+                        />
+                        {brandLogoPreview ? (
+                          <div className="relative w-full h-40 rounded-lg overflow-hidden border-2 border-[var(--color-gold)] bg-white flex items-center justify-center hover:opacity-90 transition-opacity">
+                            <Image 
+                              src={brandLogoPreview} 
+                              alt="Brand logo preview" 
+                              fill 
+                              className="object-contain p-4"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-40 rounded-lg bg-neutral-800 flex items-center justify-center border-2 border-dashed border-neutral-700 hover:border-[var(--color-gold)]/50 transition-colors">
+                            <div className="text-center">
+                              <Upload className="w-12 h-12 text-neutral-600 mx-auto mb-2" />
+                              <p className="text-neutral-500 text-sm">Click to upload your brand logo</p>
+                            </div>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-neutral-400 text-sm mb-2">Brokerage Name</label>
+                      <input
+                        type="text"
+                        value={formData.brokerage_name}
+                        onChange={(e) => setFormData({ ...formData, brokerage_name: e.target.value })}
+                        placeholder="e.g., Coldwell Banker, Royal LePage"
+                        className="w-full px-3 py-2.5 bg-[#111111] border border-neutral-800 rounded-lg text-white text-sm placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors"
+                      />
+                    </div>
+                  </div>
+                )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Confirmation */}
+          {currentStep === 4 && (
+            <div className="space-y-4">
+              <div className="space-y-3 bg-[#111111] rounded-lg p-4 border border-neutral-700">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-neutral-500 mb-1">Phone</p>
+                    <p className="text-white font-medium">{formData.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-500 mb-1">Email</p>
+                    <p className="text-white font-medium text-sm">{formData.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-500 mb-1">Years in Business</p>
+                    <p className="text-white font-medium">{formData.years_in_business} years</p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-neutral-700">
+                  <p className="text-xs text-neutral-500 mb-1">Address</p>
+                  <p className="text-white font-medium">{formData.address}</p>
+                </div>
+
+                {formData.calendly_link && (
+                  <div className="pt-4 border-t border-neutral-700">
+                    <p className="text-xs text-neutral-500 mb-1">Calendly Link</p>
+                    <p className="text-white font-medium text-sm break-all">{formData.calendly_link}</p>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-neutral-700">
+                  <p className="text-xs text-neutral-500 mb-1">Company Name</p>
+                  <p className="text-white font-medium">{formData.company_name}</p>
+                </div>
+
+                <div className="pt-4 border-t border-neutral-700">
+                  <p className="text-xs text-neutral-500 mb-2">Markets ({formData.markets.length})</p>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.markets.map((city: string) => (
+                      <span 
+                        key={city}
+                        className="px-3 py-1 bg-[var(--color-gold)]/20 text-white rounded-lg text-sm border border-[var(--color-gold)]/30"
+                      >
+                        {city}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-neutral-700">
+                  <p className="text-xs text-neutral-500 mb-1">Realtor Type</p>
+                  <p className="text-white font-medium capitalize">
+                    {formData.realtor_type === "solo" ? "Solo Realtor" : "Team Brand"}
+                  </p>
+                </div>
+
+                {formData.realtor_type === "team" && (
+                  <div className="pt-4 border-t border-neutral-700">
+                    <p className="text-xs text-neutral-500 mb-1">Brokerage Name</p>
+                    <p className="text-white font-medium">{formData.brokerage_name}</p>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value.slice(0, 500) })}
-                  placeholder="Describe your expertise, achievements, and what makes you unique..."
-                  rows={6}
-                  className="w-full px-4 py-3 bg-[#111111] border border-neutral-800 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50 transition-colors resize-none"
-                />
-                <p className="text-xs text-neutral-500 mt-2">
-                  {formData.description.length}/500 characters
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                <p className="text-yellow-200 text-sm">
+                  ⚠️ Please make sure all information is correct before proceeding. 
+                  You can update some details later in your profile settings.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Step 8/9: Complete */}
-          {currentStep === totalSteps && (
-            <div className="space-y-6 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 mb-4">
-                <Check className="w-8 h-8 text-green-500" />
-              </div>
-              <h3 className="text-2xl font-semibold text-white mb-2">All Set!</h3>
-              <p className="text-neutral-400 max-w-md mx-auto">
-                You're ready to start using RealtyGenie. Click finish to access your dashboard.
-              </p>
-            </div>
-          )}
-
           {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-neutral-800">
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-neutral-800">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
@@ -709,6 +754,8 @@ export default function OnboardingPageV2() {
             >
               {loading ? "Saving..." : currentStep === totalSteps ? "Finish" : "Continue"}
             </button>
+          </div>
+            </div>
           </div>
         </div>
       </div>

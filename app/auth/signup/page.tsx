@@ -83,14 +83,28 @@ export default function SignupPage() {
         });
 
         if (signupError) {
-            setError(signupError.message);
+            // Check if error is due to email already existing
+            if (signupError.message.toLowerCase().includes('already registered') || 
+                signupError.message.toLowerCase().includes('user already exists') ||
+                signupError.message.toLowerCase().includes('email already')) {
+                setError('This account already exists. Please sign in with your email instead.');
+            } else {
+                setError(signupError.message);
+            }
             setIsLoading(false);
             return;
         }
 
-        // Successful signup - save email and redirect to verify
-        localStorage.setItem('signupEmail', email);
-        router.push('/auth/verify');
+        // Check if signup was successful but user needs verification
+        if (data.user && !data.user.confirmed_at) {
+            // User created but not confirmed yet
+            localStorage.setItem('signupEmail', email);
+            router.push('/auth/verify');
+        } else if (data.user && data.user.confirmed_at) {
+            // User already existed - show error
+            setError('This account already exists. Please sign in with your email instead.');
+        }
+        
         setIsLoading(false);
     };
 

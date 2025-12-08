@@ -86,7 +86,7 @@ export default function BatchesPage() {
       // Recalculate lead counts from actual leads in database
       if (data) {
         const batchesWithCounts = await Promise.all(
-          data.map(async (batch) => {
+          data.map(async (batch: Batch) => {
             const { count, error: countError } = await supabase
               .from('leads')
               .select('*', { count: 'exact', head: true })
@@ -137,17 +137,19 @@ export default function BatchesPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      const tones = getTonesFromPersona(newBatchPersonas[0]);
+
       const batchData = {
         user_id: user.id,
         batch_name: newBatchName,
         description: newBatchDescription,
         objective: newBatchObjective || null,
         persona: newBatchPersonas.length > 0 ? newBatchPersonas[0] : null,
-        status: 'active',
+        tones: tones,
+        status: 'draft',
         lead_count: 0
       };
 
-      console.log('Creating batch with data:', batchData);
 
       const { data, error } = await supabase
         .from('batches')
@@ -160,7 +162,6 @@ export default function BatchesPage() {
         throw new Error(errorMessage);
       }
 
-      console.log('Batch created successfully:', data);
 
       setBatches([...(data || []), ...batches]);
       setNewBatchName('');
@@ -255,6 +256,23 @@ export default function BatchesPage() {
     }
   };
 
+  const getTonesFromPersona = (persona: string) => {
+    switch (persona.toLowerCase()) {
+      case "buyer":
+        return ["Consulative", "Advisor", "Light Expertise", "Reassuring"];
+      case "seller":
+        return ["Expert & Data Driven", "Confident", "Polished"]
+      case "investor":
+        return ["Expert & Data Driven", "Analytical", "ROI Focused"]
+      case "refferal":
+        return ["Friendly & Warm", "Relationship First"]
+      case "past clients":
+        return ["Friendly & Warm", "Occasional Light Humor"]
+      case "cold prospects":
+        return ["Light Hearted", "Humourous", "Professionalism"]
+    }
+  }
+
   return (
     <div className="px-4 sm:px-8 py-6">
       {/* Header */}
@@ -342,7 +360,7 @@ export default function BatchesPage() {
                 </button>
                 <button
                   onClick={() => handleStatusToggle(batch)}
-                  className={`flex-1 px-3 py-2 rounded transition-all text-sm font-semibold ${
+                  className={`flex-1 px-3 py-2 rounded transition-all text-sm font-semibold bg-neutral-800 hover:bg-[var(--color-gold)]/20 hover:text-[var(--color-gold)] text-white ${
                     batch.status === 'active'
                       ? 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
                       : 'bg-green-500/20 hover:bg-green-500/30 text-green-400'

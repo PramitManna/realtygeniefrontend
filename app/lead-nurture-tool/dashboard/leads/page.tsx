@@ -441,9 +441,6 @@ export default function LeadsPage() {
         lead.name?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  console.log("LEADS STATE:", leads);
-  console.log("FILTERED LEADS:", filteredLeads);
-  console.log("LEADS COUNT:", leads.length);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -579,7 +576,6 @@ export default function LeadsPage() {
             {/* Table Body */}
             <div className="divide-y divide-neutral-800">
               {filteredLeads.map((lead, index) => {
-                console.log("Rendering lead:", lead);
                 return (
                   <div
                     key={lead.id}

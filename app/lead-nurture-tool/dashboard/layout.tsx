@@ -33,7 +33,6 @@ const navItems: NavItem[] = [
   { name: "Overview", icon: Home, href: "/lead-nurture-tool/dashboard" },
   { name: "Leads", icon: Users, href: "/lead-nurture-tool/dashboard/leads" },
   { name: "Batches", icon: Layers, href: "/lead-nurture-tool/dashboard/batches" },
-  { name: "Campaigns", icon: Mail, href: "/lead-nurture-tool/dashboard/campaigns" },
   { name: "Automations", icon: Zap, href: "/lead-nurture-tool/dashboard/automations" },
   { name: "Analytics", icon: BarChart3, href: "/lead-nurture-tool/dashboard/analytics" },
   { name: "Imports", icon: Upload, href: "/lead-nurture-tool/dashboard/imports" },
@@ -116,8 +115,8 @@ export default function DashboardLayout({
         {/* Logo Section */}
         <Link href={'/'} className="h-20 flex items-center justify-center px-4 border-b border-neutral-800">
           <img
-            src="/logo.PNG"
-            alt="RealtyGenie Logo"
+            src="/logo.png"
+            alt="logo"
             width={40}
             height={40}
             className="rounded-lg flex-shrink-0"

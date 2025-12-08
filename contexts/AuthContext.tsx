@@ -39,74 +39,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const syncingProfileRef = useRef(false);
 
   // Check Meta tokens status with deduplication
-  const checkMetaTokens = async (internalUserId: string) => {
-    // Prevent duplicate calls
-    if (checkingTokensRef.current) {
-      console.log('🔄 Skipping duplicate checkMetaTokens call');
-      return;
-    }
+  // const checkMetaTokens = async (internalUserId: string) => {
+  //   // Prevent duplicate calls
+  //   if (checkingTokensRef.current) {
+  //     console.log('🔄 Skipping duplicate checkMetaTokens call');
+  //     return;
+  //   }
     
-    checkingTokensRef.current = true;
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_LOCAL_BACKEND_URL;
-      const response = await fetch(`${apiUrl}/api/autopost/user/check-meta-tokens?user_id=${internalUserId}`);
+  //   checkingTokensRef.current = true;
+  //   try {
+  //     const apiUrl = process.env.NEXT_PUBLIC_LOCAL_BACKEND_URL;
+  //     const response = await fetch(`${apiUrl}/api/autopost/user/check-meta-tokens?user_id=${internalUserId}`);
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🔍 Meta tokens response:', data);
-        const tokenStatus = data.has_tokens || false;
-        setHasMetaTokens(tokenStatus);
-        console.log('✅ Meta tokens status set to:', tokenStatus);
-      } else {
-        console.error('Failed to check Meta tokens:', response.status);
-        setHasMetaTokens(false);
-      }
-    } catch (error) {
-      console.warn('Could not check Meta tokens:', error);
-      setHasMetaTokens(false);
-    } finally {
-      // Reset flag after a short delay to allow new checks after state changes
-      setTimeout(() => {
-        checkingTokensRef.current = false;
-      }, 1000);
-    }
-  };
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       console.log('🔍 Meta tokens response:', data);
+  //       const tokenStatus = data.has_tokens || false;
+  //       setHasMetaTokens(tokenStatus);
+  //       console.log('✅ Meta tokens status set to:', tokenStatus);
+  //     } else {
+  //       console.error('Failed to check Meta tokens:', response.status);
+  //       setHasMetaTokens(false);
+  //     }
+  //   } catch (error) {
+  //     console.warn('Could not check Meta tokens:', error);
+  //     setHasMetaTokens(false);
+  //   } finally {
+  //     // Reset flag after a short delay to allow new checks after state changes
+  //     setTimeout(() => {
+  //       checkingTokensRef.current = false;
+  //     }, 1000);
+  //   }
+  // };
 
-  // Sync user profile to database with deduplication
-  const syncUserProfile = async (supabaseSession: Session) => {
-    // Prevent duplicate calls
-    if (syncingProfileRef.current) {
-      console.log('🔄 Skipping duplicate syncUserProfile call');
-      return;
-    }
+  // // Sync user profile to database with deduplication
+  // const syncUserProfile = async (supabaseSession: Session) => {
+  //   // Prevent duplicate calls
+  //   if (syncingProfileRef.current) {
+  //     console.log('🔄 Skipping duplicate syncUserProfile call');
+  //     return;
+  //   }
     
-    syncingProfileRef.current = true;
-    try {
-      const internalUserId = supabaseSession.user.id;
+  //   syncingProfileRef.current = true;
+  //   try {
+  //     const internalUserId = supabaseSession.user.id;
       
-      // Sync to your backend
-      const apiUrl = process.env.NEXT_PUBLIC_LOCAL_BACKEND_URL;
-      await fetch(`${apiUrl}/api/autopost/user/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: internalUserId,
-          email: supabaseSession.user.email,
-          userName: supabaseSession.user.user_metadata?.full_name || supabaseSession.user.user_metadata?.name,
-          provider: supabaseSession.user.app_metadata?.provider || 'email'
-        })
-      });
+  //     // Sync to your backend
+  //     const apiUrl = process.env.NEXT_PUBLIC_LOCAL_BACKEND_URL;
+  //     await fetch(`${apiUrl}/api/autopost/user/sync`, {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         userId: internalUserId,
+  //         email: supabaseSession.user.email,
+  //         userName: supabaseSession.user.user_metadata?.full_name || supabaseSession.user.user_metadata?.name,
+  //         provider: supabaseSession.user.app_metadata?.provider || 'email'
+  //       })
+  //     });
       
-      console.log('✅ User profile synced to backend');
-    } catch (error) {
-      console.warn('Could not sync user profile:', error);
-    } finally {
-      // Reset flag after a short delay
-      setTimeout(() => {
-        syncingProfileRef.current = false;
-      }, 1000);
-    }
-  };
+  //     console.log('✅ User profile synced to backend');
+  //   } catch (error) {
+  //     console.warn('Could not sync user profile:', error);
+  //   } finally {
+  //     // Reset flag after a short delay
+  //     setTimeout(() => {
+  //       syncingProfileRef.current = false;
+  //     }, 1000);
+  //   }
+  // };
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -181,10 +181,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserId(supabaseSession.user.id);
         
         // Sync user profile
-        await syncUserProfile(supabaseSession);
+        // await syncUserProfile(supabaseSession);
         
         // Check Meta tokens
-        await checkMetaTokens(supabaseSession.user.id);
+        // await checkMetaTokens(supabaseSession.user.id);
       } else {
         setSession(null);
         setUser(null);
@@ -273,7 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserId(supabaseSession.user.id);
       
       // Re-check Meta tokens after refresh
-      await checkMetaTokens(supabaseSession.user.id);
+      // await checkMetaTokens(supabaseSession.user.id);
     }
   };
 

@@ -23,6 +23,7 @@ import {
   ArrowRight,
   Loader,
 } from "lucide-react";
+import { StepCompletionButton } from "@/components/StepCompletionButton";
 
 interface Batch {
   id: string;
@@ -471,6 +472,9 @@ export default function AutomationsPage() {
             </p>
           </div>
           <div className="flex items-center space-x-3">
+            <StepCompletionButton 
+              stepName="setup-automations"
+            />
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}

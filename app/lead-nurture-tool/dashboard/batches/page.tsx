@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import { Plus, Trash2, Edit2, X, FileText, Target, Radio, Clock, Copy, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { batchesApi } from '@/lib/api';
+import { StepCompletionButton } from '@/components/StepCompletionButton';
 
 const supabase = createClient();
 
@@ -137,15 +138,14 @@ export default function BatchesPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const tones = getTonesFromPersona(newBatchPersonas[0]);
+      const personaValue = getPersonaValue(newBatchPersonas[0] || 'buyer');
 
       const batchData = {
         user_id: user.id,
         batch_name: newBatchName,
         description: newBatchDescription,
         objective: newBatchObjective || null,
-        persona: newBatchPersonas.length > 0 ? newBatchPersonas[0] : null,
-        tones: tones,
+        persona: personaValue,
         status: 'draft',
         lead_count: 0
       };
@@ -256,21 +256,25 @@ export default function BatchesPage() {
     }
   };
 
-  const getTonesFromPersona = (persona: string) => {
-    switch (persona.toLowerCase()) {
-      case "buyer":
-        return ["Consulative", "Advisor", "Light Expertise", "Reassuring"];
-      case "seller":
-        return ["Expert & Data Driven", "Confident", "Polished"]
-      case "investor":
-        return ["Expert & Data Driven", "Analytical", "ROI Focused"]
-      case "refferal":
-        return ["Friendly & Warm", "Relationship First"]
-      case "past clients":
-        return ["Friendly & Warm", "Occasional Light Humor"]
-      case "cold prospects":
-        return ["Light Hearted", "Humourous", "Professionalism"]
+  const getPersonaValue = (persona: string) => {
+    // Persona values are already in correct database format
+    // Just validate they match our expected values
+    const validPersonas = ['buyer', 'seller', 'investor', 'past_client', 'referral', 'cold_prospect'];
+    
+    if (validPersonas.includes(persona)) {
+      return persona;
     }
+    
+    // Fallback mapping for any legacy or unexpected formats
+    const lowerPersona = persona.toLowerCase();
+    if (lowerPersona.includes("buyer")) return "buyer";
+    if (lowerPersona.includes("seller")) return "seller";
+    if (lowerPersona.includes("investor")) return "investor";
+    if (lowerPersona.includes("past") || lowerPersona.includes("client")) return "past_client";
+    if (lowerPersona.includes("referral")) return "referral";
+    if (lowerPersona.includes("cold") || lowerPersona.includes("prospect")) return "cold_prospect";
+    
+    return "buyer"; // Default fallback
   }
 
   return (
@@ -288,13 +292,19 @@ export default function BatchesPage() {
             Organize and manage your lead batches
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black font-semibold rounded-lg transition-all hover:shadow-lg hover:shadow-[var(--color-gold)]/30"
-        >
-          <Plus size={20} />
-          <span>New Batch</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <StepCompletionButton 
+            stepName="create-batch"
+            nextStepUrl="/lead-nurture-tool/dashboard/leads"
+          />
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black font-semibold rounded-lg transition-all hover:shadow-lg hover:shadow-[var(--color-gold)]/30"
+          >
+            <Plus size={20} />
+            <span>New Batch</span>
+          </button>
+        </div>
       </motion.div>
 
       {loading ? (

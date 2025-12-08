@@ -26,7 +26,8 @@ export default function SignupPage() {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
+        const timer = setTimeout(() => setMounted(true), 0);
+        return () => clearTimeout(timer);
     }, []);
 
     // Redirect if already logged in

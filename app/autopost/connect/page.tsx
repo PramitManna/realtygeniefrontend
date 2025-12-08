@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { FiZap, FiCheckCircle, FiLoader, FiLogOut, FiArrowRight } from 'react-icons/fi';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Spotlight } from "@/components/ui/spotlight-new";
 
 const apiurl = process.env.NEXT_PUBLIC_LOCAL_BACKEND_URL
@@ -16,13 +16,7 @@ export default function ConnectPage() {
   const [hasMetaTokens, setHasMetaTokens] = useState(false);
 
   // Check if user has Meta tokens
-  useEffect(() => {
-    if (user) {
-      checkMetaTokens();
-    }
-  }, [user]);
-
-  const checkMetaTokens = async () => {
+  const checkMetaTokens = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -32,7 +26,13 @@ export default function ConnectPage() {
     } catch (error) {
       console.error('Error checking Meta tokens:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      checkMetaTokens();
+    }
+  }, [user, checkMetaTokens]);
 
   // If not authenticated, will be redirected by AuthContext
   // Show loading state while checking authentication

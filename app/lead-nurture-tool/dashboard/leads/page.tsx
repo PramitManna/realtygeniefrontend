@@ -22,6 +22,7 @@ import {
   Edit2,
   Camera,
 } from "lucide-react";
+import { StepCompletionButton } from "@/components/StepCompletionButton";
 
 interface Lead {
   id: string;
@@ -477,21 +478,27 @@ export default function LeadsPage() {
             Manage and track all your leads in one place
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-semibold rounded-lg transition-all"
-          >
-            <Upload size={20} />
-            <span>Import</span>
-          </button>
-          <button
-            onClick={() => setShowNewLeadModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black font-semibold rounded-lg transition-all hover:shadow-lg hover:shadow-[var(--color-gold)]/30"
-          >
-            <Plus size={20} />
-            <span>Add Lead</span>
-          </button>
+        <div className="flex items-center gap-3">
+          <StepCompletionButton 
+            stepName="import-leads"
+            nextStepUrl="/lead-nurture-tool/dashboard/automations"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-semibold rounded-lg transition-all"
+            >
+              <Upload size={20} />
+              <span>Import</span>
+            </button>
+            <button
+              onClick={() => setShowNewLeadModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black font-semibold rounded-lg transition-all hover:shadow-lg hover:shadow-[var(--color-gold)]/30"
+            >
+              <Plus size={20} />
+              <span>Add Lead</span>
+            </button>
+          </div>
         </div>
       </motion.div>
 

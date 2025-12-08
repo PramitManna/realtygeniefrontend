@@ -4,9 +4,9 @@ import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { API_CONFIG } from "@/lib/api-config";
-import { X, Mail, Users, MessageCircle, Send, Loader } from "lucide-react";
+import { X, Mail, Users, MessageCircle, Send, Loader, Calendar, Sparkles } from "lucide-react";
 
-
+type TabType = "custom" | "festive";
 
 interface EmailTriggerModalProps {
   isOpen: boolean;
@@ -28,6 +28,94 @@ const EMAIL_PURPOSES = [
   "Thank you message"
 ];
 
+// Vancouver festivals and celebrations
+const FESTIVE_OCCASIONS = [
+  { 
+    id: "christmas", 
+    name: "Christmas", 
+    date: "Dec 25", 
+    emoji: "🎄",
+    description: "Celebrate the holiday season with warm greetings"
+  },
+  { 
+    id: "new_year", 
+    name: "New Year", 
+    date: "Jan 1", 
+    emoji: "🎉",
+    description: "Welcome the new year with best wishes"
+  },
+  { 
+    id: "valentines", 
+    name: "Valentine's Day", 
+    date: "Feb 14", 
+    emoji: "💝",
+    description: "Show appreciation with heartfelt messages"
+  },
+  { 
+    id: "easter", 
+    name: "Easter", 
+    date: "Variable", 
+    emoji: "🐰",
+    description: "Spring celebration with renewal themes"
+  },
+  { 
+    id: "mothers_day", 
+    name: "Mother's Day", 
+    date: "2nd Sun May", 
+    emoji: "🌸",
+    description: "Honor mothers and families"
+  },
+  { 
+    id: "fathers_day", 
+    name: "Father's Day", 
+    date: "3rd Sun Jun", 
+    emoji: "👔",
+    description: "Celebrate fathers and father figures"
+  },
+  { 
+    id: "canada_day", 
+    name: "Canada Day", 
+    date: "Jul 1", 
+    emoji: "🇨🇦",
+    description: "Celebrate Canadian pride and community"
+  },
+  { 
+    id: "thanksgiving", 
+    name: "Thanksgiving", 
+    date: "2nd Mon Oct", 
+    emoji: "🦃",
+    description: "Express gratitude and appreciation"
+  },
+  { 
+    id: "halloween", 
+    name: "Halloween", 
+    date: "Oct 31", 
+    emoji: "🎃",
+    description: "Fun and festive seasonal greetings"
+  },
+  { 
+    id: "diwali", 
+    name: "Diwali", 
+    date: "Variable", 
+    emoji: "🪔",
+    description: "Festival of lights celebration"
+  },
+  { 
+    id: "hanukkah", 
+    name: "Hanukkah", 
+    date: "Variable", 
+    emoji: "🕎",
+    description: "Festival of lights celebration"
+  },
+  { 
+    id: "chinese_new_year", 
+    name: "Chinese New Year", 
+    date: "Variable", 
+    emoji: "🧧",
+    description: "Lunar new year celebration"
+  }
+];
+
 
 
 
@@ -38,9 +126,12 @@ export default function EmailTriggerModal({
   onSuccess,
   onError
 }: EmailTriggerModalProps) {
+  const [activeTab, setActiveTab] = useState<TabType>("custom");
   const [selectedPurpose, setSelectedPurpose] = useState<string>("");
   const [selectedPersona, setSelectedPersona] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [festiveSettings, setFestiveSettings] = useState<Record<string, boolean>>({});
+  const [loadingFestive, setLoadingFestive] = useState(false);
 
   const personaOptions = [
     { value: 'buyer', label: 'Buyer', description: 'Looking to purchase properties' },
@@ -57,15 +148,77 @@ export default function EmailTriggerModal({
   
   const supabase = createClient();
 
+  // Load festive settings when modal opens
+  useEffect(() => {
+    if (isOpen && activeTab === "festive") {
+      loadFestiveSettings();
+    }
+  }, [isOpen, activeTab]);
+
   useEffect(() => {
     if (!isOpen) {
       // Reset form state when modal closes
+      setActiveTab("custom");
       setSelectedPurpose("");
       setSelectedPersona("");
       setShortDescription("");
       setIsLoading(false);
     }
   }, [isOpen]);
+
+  const loadFestiveSettings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/lead-nurture/festive-settings?user_id=${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFestiveSettings(data.settings || {});
+      }
+    } catch (error) {
+      console.error("Error loading festive settings:", error);
+    }
+  };
+
+  const handleFestiveToggle = async (festiveId: string, enabled: boolean) => {
+    try {
+      setLoadingFestive(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        onError("User not authenticated");
+        return;
+      }
+
+      const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/lead-nurture/festive-settings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          festive_id: festiveId,
+          enabled: enabled
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update festive settings");
+      }
+
+      setFestiveSettings(prev => ({
+        ...prev,
+        [festiveId]: enabled
+      }));
+
+      onSuccess(enabled ? "Festive email enabled" : "Festive email disabled");
+    } catch (error) {
+      console.error("Error updating festive settings:", error);
+      onError("Failed to update settings");
+    } finally {
+      setLoadingFestive(false);
+    }
+  };
 
   const isFormValid = useMemo(() => {
     return selectedPurpose && selectedPersona;
@@ -182,100 +335,202 @@ export default function EmailTriggerModal({
           className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden relative"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Mail className="h-6 w-6 text-blue-600" />
+          <div className="border-b border-gray-200">
+            <div className="flex items-center justify-between p-6 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Mail className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Email Campaign Manager
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Send custom or festive emails to your leads
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Trigger Email Campaign
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Send personalized emails to all your leads
-                </p>
-              </div>
+              <button
+                onClick={handleClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                disabled={isLoading}
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
             </div>
-            <button
-              onClick={handleClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              disabled={isLoading}
-            >
-              <X className="h-5 w-5 text-gray-500" />
-            </button>
+
+            {/* Tabs */}
+            <div className="flex space-x-1 px-6">
+              <button
+                onClick={() => setActiveTab("custom")}
+                className={`
+                  flex items-center space-x-2 px-4 py-2 rounded-t-lg transition-all
+                  ${activeTab === "custom"
+                    ? "bg-white border-t-2 border-x border-blue-600 text-blue-600 font-medium"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }
+                `}
+              >
+                <Send className="h-4 w-4" />
+                <span>Custom Email</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("festive")}
+                className={`
+                  flex items-center space-x-2 px-4 py-2 rounded-t-lg transition-all
+                  ${activeTab === "festive"
+                    ? "bg-white border-t-2 border-x border-blue-600 text-blue-600 font-medium"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }
+                `}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Festive Emails</span>
+              </button>
+            </div>
           </div>
 
           {/* Content */}
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-            <div className="space-y-6">
-              {/* Purpose Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Purpose of Email *
-                </label>
-                <select
-                  value={selectedPurpose}
-                  onChange={(e) => setSelectedPurpose(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-                >
-                  <option value="" className="text-gray-500">Select a purpose...</option>
-                  {EMAIL_PURPOSES.map((purpose) => (
-                    <option key={purpose} value={purpose} className="text-gray-900 bg-white">
-                      {purpose}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {activeTab === "custom" ? (
+              // Custom Email Panel
+              <div className="space-y-6">
+                {/* Purpose Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Purpose of Email *
+                  </label>
+                  <select
+                    value={selectedPurpose}
+                    onChange={(e) => setSelectedPurpose(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+                  >
+                    <option value="" className="text-gray-500">Select a purpose...</option>
+                    {EMAIL_PURPOSES.map((purpose) => (
+                      <option key={purpose} value={purpose} className="text-gray-900 bg-white">
+                        {purpose}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Persona Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Target Persona *
-                </label>
-                <select
-                  value={selectedPersona}
-                  onChange={(e) => setSelectedPersona(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-                  required
-                >
-                  <option value="" className="text-gray-500">Select target persona...</option>
-                  {personaOptions.map((persona) => (
-                    <option key={persona.value} value={persona.value} className="text-gray-900 bg-white">
-                      {persona.label} - {persona.description}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  The email tone will be automatically optimized for this persona
-                </p>
-              </div>
+                {/* Persona Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Persona *
+                  </label>
+                  <select
+                    value={selectedPersona}
+                    onChange={(e) => setSelectedPersona(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                    required
+                  >
+                    <option value="" className="text-gray-500">Select target persona...</option>
+                    {personaOptions.map((persona) => (
+                      <option key={persona.value} value={persona.value} className="text-gray-900 bg-white">
+                        {persona.label} - {persona.description}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    The email tone will be automatically optimized for this persona
+                  </p>
+                </div>
 
-              {/* Short Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Additional Context (Optional)
-                </label>
-                <textarea
-                  value={shortDescription}
-                  onChange={(e) => setShortDescription(e.target.value)}
-                  placeholder="Provide any additional context or details for the email content..."
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                />
-              </div>
+                {/* Short Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Additional Context (Optional)
+                  </label>
+                  <textarea
+                    value={shortDescription}
+                    onChange={(e) => setShortDescription(e.target.value)}
+                    placeholder="Provide any additional context or details for the email content..."
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
 
-              {/* Summary */}
-              {(selectedPurpose || selectedPersona) && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h3 className="font-medium text-gray-900 mb-2">Email Summary</h3>
-                  <div className="space-y-1 text-sm text-gray-600">
-                    <p>• Target: All leads</p>
-                    <p>• Purpose: {selectedPurpose || "Not selected"}</p>
-                    <p>• Persona: {personaOptions.find(p => p.value === selectedPersona)?.label || "None selected"}</p>
+                {/* Summary */}
+                {(selectedPurpose || selectedPersona) && (
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <h3 className="font-medium text-gray-900 mb-2">Email Summary</h3>
+                    <div className="space-y-1 text-sm text-gray-600">
+                      <p>• Target: All leads</p>
+                      <p>• Purpose: {selectedPurpose || "Not selected"}</p>
+                      <p>• Persona: {personaOptions.find(p => p.value === selectedPersona)?.label || "None selected"}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Festive Email Panel
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                    <div>
+                      <h3 className="font-medium text-blue-900 mb-1">Automated Festive Greetings</h3>
+                      <p className="text-sm text-blue-700">
+                        Enable automatic festive email sending on special occasions. When enabled, 
+                        our system will automatically send personalized greetings to all your leads 
+                        on the selected festival days.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {FESTIVE_OCCASIONS.map((festival) => (
+                    <motion.div
+                      key={festival.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 flex-1">
+                          <div className="text-3xl">{festival.emoji}</div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 mb-1">
+                              {festival.name}
+                            </h4>
+                            <p className="text-xs text-gray-500 mb-1">{festival.date}</p>
+                            <p className="text-sm text-gray-600">{festival.description}</p>
+                          </div>
+                        </div>
+                        <div className="ml-3">
+                          <button
+                            onClick={() => handleFestiveToggle(festival.id, !festiveSettings[festival.id])}
+                            disabled={loadingFestive}
+                            className={`
+                              relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                              ${festiveSettings[festival.id] ? 'bg-blue-600' : 'bg-gray-300'}
+                              ${loadingFestive ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                            `}
+                          >
+                            <span
+                              className={`
+                                inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                                ${festiveSettings[festival.id] ? 'translate-x-6' : 'translate-x-1'}
+                              `}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-6">
+                  <p className="text-sm text-amber-800">
+                    <span className="font-medium">Note:</span> Festive emails will be sent automatically 
+                    on the festival day at 9:00 AM local time. You can enable or disable any festival at any time.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
 
@@ -287,32 +542,34 @@ export default function EmailTriggerModal({
               disabled={isLoading}
               className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
             >
-              Cancel
+              Close
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={isLoading || !isFormValid}
-              className={`
-                px-8 py-2 bg-blue-600 text-white rounded-xl font-medium
-                flex items-center space-x-2 transition-colors
-                ${isLoading || !isFormValid
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-blue-700"
-                }
-              `}
-            >
-              {isLoading ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span>{progressMessage || "Processing..."}</span>
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  <span>Generate & Send Emails</span>
-                </>
-              )}
-            </button>
+            {activeTab === "custom" && (
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading || !isFormValid}
+                className={`
+                  px-8 py-2 bg-blue-600 text-white rounded-xl font-medium
+                  flex items-center space-x-2 transition-colors
+                  ${isLoading || !isFormValid
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-blue-700"
+                  }
+                `}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span>{progressMessage || "Processing..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    <span>Generate & Send Emails</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Success Animation Overlay */}
@@ -406,7 +663,7 @@ export default function EmailTriggerModal({
                   {[...Array(12)].map((_, i) => (
                     <motion.div
                       key={i}
-                      className="absolute w-2 h-2 bg-gradient-to-r from-blue-400 to-green-400 rounded-full"
+                      className="absolute w-2 h-2 bg-linear-to-r from-blue-400 to-green-400 rounded-full"
                       style={{
                         left: `${Math.random() * 100}%`,
                         top: `${Math.random() * 100}%`,

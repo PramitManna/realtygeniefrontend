@@ -140,9 +140,12 @@ export default function BatchesPage() {
 
       const personaValue = getPersonaValue(newBatchPersonas[0] || 'buyer');
 
+      const tones = getTones(newBatchPersonas[0])
+
       const batchData = {
         user_id: user.id,
         batch_name: newBatchName,
+        tones: tones,
         description: newBatchDescription,
         objective: newBatchObjective || null,
         persona: personaValue,
@@ -275,6 +278,23 @@ export default function BatchesPage() {
     if (lowerPersona.includes("cold") || lowerPersona.includes("prospect")) return "cold_prospect";
     
     return "buyer"; // Default fallback
+  }
+
+  const getTones = (persona: string) => {
+    switch (persona) {
+      case "buyer":
+        return ["Consultative", "Advisor", "Light Expertise", "Reassuring"]
+      case "seller":
+        return ["Expert", "Data Driven", "Confident", "Polished"]
+      case "investor":
+        return ["Expert", "Data Driven", "Analytical", "ROI Focused"]
+      case "referrals":
+        return ["Friendly", "Warm", "Relationship first"]
+      case "past clients":
+        return ["Friendly", "Warm", "Occasional Light Humor"]
+      case "cold prospects":
+        return ["Light Hearted", "Humourous", "Add Professionalism"]
+    }
   }
 
   return (

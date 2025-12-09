@@ -151,11 +151,10 @@ export default function AutomationsPage() {
       let target_city: string[] = [];
 
 
-      if (user) {
         const { data: profileData } = await supabase
           .from('profiles')
           .select('full_name, company_name, markets')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single();
 
         if (profileData) {
@@ -164,9 +163,8 @@ export default function AutomationsPage() {
           // Don't automatically use profile markets - user should specify target city
           // target_city = profileData.markets || target_city;
         }
-      }
 
-
+      console.log(selectedBatch)
 
       const response = await fetch('/api/campaigns/generate-drafts', {
         method: 'POST',

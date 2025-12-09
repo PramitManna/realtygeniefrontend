@@ -44,7 +44,7 @@ const renderEmailHTML = (htmlContent: string): React.ReactNode => {
   return (
     <div 
       dangerouslySetInnerHTML={{ __html: htmlContent }}
-      className="text-neutral-300 break-words leading-relaxed text-base"
+      className="text-neutral-300 break-words leading-relaxed text-base space-y-4 [&_p]:mb-4 [&_a]:text-blue-400 [&_a]:underline [&_strong]:text-[#d4af37] [&_ul]:list-disc [&_ul]:ml-6 [&_li]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-4"
     />
   );
 };
@@ -256,7 +256,7 @@ export default function DraftReview({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-white/5 border border-white/10 rounded-lg p-8 min-h-[600px] overflow-y-auto space-y-8"
+          className="bg-white/5 border border-white/10 rounded-lg p-8 max-h-[800px] overflow-y-auto space-y-8"
         >
           {/* Subject */}
           <div className="space-y-3">

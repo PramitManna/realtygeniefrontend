@@ -12,8 +12,8 @@ interface StepCompletionButtonProps {
   nextStepUrl?: string;
 }
 
-export function StepCompletionButton({ 
-  stepName, 
+export function StepCompletionButton({
+  stepName,
   onCompletionChange,
   className = '',
   nextStepUrl
@@ -40,18 +40,18 @@ export function StepCompletionButton({
 
   const handleComplete = async () => {
     if (isCompleted) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const result = await StepCompletionService.completeStep(stepName);
-      
+
       if (result.success) {
         setIsCompleted(true);
         setShowSuccess(true);
         onCompletionChange?.(true);
-        
+
         // Navigate to next step if nextStepUrl is provided
         if (nextStepUrl) {
           setTimeout(() => {
@@ -83,8 +83,8 @@ export function StepCompletionButton({
         className={`
           inline-flex items-center gap-3 px-6 py-3 rounded-xl font-semibold text-sm
           transition-all duration-300 border-2 shadow-lg hover:shadow-xl
-          ${isCompleted 
-            ? 'bg-green-500 border-green-500 text-white shadow-green-500/20' 
+          ${isCompleted
+            ? 'bg-green-500 border-green-500 text-white shadow-green-500/20'
             : isLoading
               ? 'bg-blue-50 border-blue-200 text-blue-600 shadow-blue-200/50'
               : 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-500 text-white hover:from-blue-600 hover:to-blue-700 hover:border-blue-600 shadow-blue-500/30'
@@ -95,8 +95,8 @@ export function StepCompletionButton({
       >
         <div className={`
           w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
-          ${isCompleted 
-            ? 'bg-white border-white' 
+          ${isCompleted
+            ? 'bg-white border-white'
             : isLoading
               ? 'bg-transparent border-blue-400'
               : 'bg-transparent border-white/80'
@@ -108,11 +108,11 @@ export function StepCompletionButton({
             <Check size={14} className="text-green-500" />
           ) : null}
         </div>
-        
+
         <span className="font-semibold">
-          {isLoading ? 'Validating...' : isCompleted ? '✓ Completed' : 'Mark as Done'}
+          {isLoading ? 'Validating...' : isCompleted ? 'Completed' : 'Mark as Done'}
         </span>
-        
+
         {nextStepUrl && !isCompleted && !isLoading && (
           <span className="text-xs opacity-75">& Next</span>
         )}

@@ -4,7 +4,11 @@ import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { API_CONFIG } from "@/lib/api-config";
-import { X, Mail, Users, MessageCircle, Send, Loader, Calendar, Sparkles } from "lucide-react";
+import {
+  X, Mail, Users, MessageCircle, Send, Loader, Calendar, Sparkles, CheckCircle,
+  Gift, PartyPopper, Heart, Rabbit, Flower, Shirt, Flag, Utensils, Ghost, Flame,
+  CandlestickChart, Ticket
+} from "lucide-react";
 
 type TabType = "custom" | "festive";
 
@@ -17,7 +21,7 @@ interface EmailTriggerModalProps {
 
 const EMAIL_PURPOSES = [
   "Realtor received an award",
-  "Realtor featured in newspaper or magazine", 
+  "Realtor featured in newspaper or magazine",
   "Market updates",
   "New property listings",
   "Seasonal greetings or appreciation",
@@ -30,95 +34,103 @@ const EMAIL_PURPOSES = [
 
 // Vancouver festivals and celebrations
 const FESTIVE_OCCASIONS = [
-  { 
-    id: "christmas", 
-    name: "Christmas", 
-    date: "Dec 25", 
-    emoji: "🎄",
+  {
+    id: "christmas",
+    name: "Christmas",
+    date: "Dec 25",
+    icon: Gift,
+    color: "text-red-500",
     description: "Celebrate the holiday season with warm greetings"
   },
-  { 
-    id: "new_year", 
-    name: "New Year", 
-    date: "Jan 1", 
-    emoji: "🎉",
+  {
+    id: "new_year",
+    name: "New Year",
+    date: "Jan 1",
+    icon: PartyPopper,
+    color: "text-yellow-500",
     description: "Welcome the new year with best wishes"
   },
-  { 
-    id: "valentines", 
-    name: "Valentine's Day", 
-    date: "Feb 14", 
-    emoji: "💝",
+  {
+    id: "valentines",
+    name: "Valentine's Day",
+    date: "Feb 14",
+    icon: Heart,
+    color: "text-pink-500",
     description: "Show appreciation with heartfelt messages"
   },
-  { 
-    id: "easter", 
-    name: "Easter", 
-    date: "Variable", 
-    emoji: "🐰",
+  {
+    id: "easter",
+    name: "Easter",
+    date: "Variable",
+    icon: Rabbit,
+    color: "text-purple-500",
     description: "Spring celebration with renewal themes"
   },
-  { 
-    id: "mothers_day", 
-    name: "Mother's Day", 
-    date: "2nd Sun May", 
-    emoji: "🌸",
+  {
+    id: "mothers_day",
+    name: "Mother's Day",
+    date: "2nd Sun May",
+    icon: Flower,
+    color: "text-pink-400",
     description: "Honor mothers and families"
   },
-  { 
-    id: "fathers_day", 
-    name: "Father's Day", 
-    date: "3rd Sun Jun", 
-    emoji: "👔",
+  {
+    id: "fathers_day",
+    name: "Father's Day",
+    date: "3rd Sun Jun",
+    icon: Shirt,
+    color: "text-blue-500",
     description: "Celebrate fathers and father figures"
   },
-  { 
-    id: "canada_day", 
-    name: "Canada Day", 
-    date: "Jul 1", 
-    emoji: "🇨🇦",
+  {
+    id: "canada_day",
+    name: "Canada Day",
+    date: "Jul 1",
+    icon: Flag,
+    color: "text-red-600",
     description: "Celebrate Canadian pride and community"
   },
-  { 
-    id: "thanksgiving", 
-    name: "Thanksgiving", 
-    date: "2nd Mon Oct", 
-    emoji: "🦃",
+  {
+    id: "thanksgiving",
+    name: "Thanksgiving",
+    date: "2nd Mon Oct",
+    icon: Utensils,
+    color: "text-orange-600",
     description: "Express gratitude and appreciation"
   },
-  { 
-    id: "halloween", 
-    name: "Halloween", 
-    date: "Oct 31", 
-    emoji: "🎃",
+  {
+    id: "halloween",
+    name: "Halloween",
+    date: "Oct 31",
+    icon: Ghost,
+    color: "text-orange-500",
     description: "Fun and festive seasonal greetings"
   },
-  { 
-    id: "diwali", 
-    name: "Diwali", 
-    date: "Variable", 
-    emoji: "🪔",
+  {
+    id: "diwali",
+    name: "Diwali",
+    date: "Variable",
+    icon: Flame,
+    color: "text-yellow-600",
     description: "Festival of lights celebration"
   },
-  { 
-    id: "hanukkah", 
-    name: "Hanukkah", 
-    date: "Variable", 
-    emoji: "🕎",
+  {
+    id: "hanukkah",
+    name: "Hanukkah",
+    date: "Variable",
+    icon: CandlestickChart, // Using CandlestickChart as a placeholder for Menorah/Candles if Menorah isn't available, or just Flame
+    color: "text-blue-400",
     description: "Festival of lights celebration"
   },
-  { 
-    id: "chinese_new_year", 
-    name: "Chinese New Year", 
-    date: "Variable", 
-    emoji: "🧧",
+  {
+    id: "chinese_new_year",
+    name: "Chinese New Year",
+    date: "Variable",
+    icon: Ticket, // Using Ticket as generic red envelope placeholder or similar
+    color: "text-red-500",
     description: "Lunar new year celebration"
   }
 ];
-
-
-
-
 
 export default function EmailTriggerModal({
   isOpen,
@@ -145,7 +157,7 @@ export default function EmailTriggerModal({
   const [isLoading, setIsLoading] = useState(false);
   const [lastSubmitTime, setLastSubmitTime] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
-  
+
   const supabase = createClient();
 
   // Load festive settings when modal opens
@@ -238,20 +250,20 @@ export default function EmailTriggerModal({
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     // Prevent multiple simultaneous submissions and debounce rapid clicks
     const now = Date.now();
     if (isLoading || (now - lastSubmitTime < 2000)) {
       return;
     }
-    
+
     setLastSubmitTime(now);
-    
+
     try {
       setIsLoading(true);
       setProgressMessage("Authenticating user...");
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         onError("User not authenticated");
         return;
@@ -287,15 +299,15 @@ export default function EmailTriggerModal({
         }
 
         const result = await response.json();
-        
+
         // Show success animation instead of calling onSuccess
         setShowSuccess(true);
-        
+
         // Auto-close after animation
         setTimeout(() => {
           handleClose();
         }, 2500);
-        
+
       } catch (fetchError) {
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
           onError("Request timed out. The emails may still be processing in the background. Please check your campaign status.");
@@ -303,7 +315,7 @@ export default function EmailTriggerModal({
           throw fetchError;
         }
       }
-      
+
     } catch (error) {
       console.error("Error triggering emails:", error);
       onError(error instanceof Error ? error.message : "Failed to trigger emails");
@@ -456,9 +468,18 @@ export default function EmailTriggerModal({
                   <div className="bg-gray-50 rounded-xl p-4">
                     <h3 className="font-medium text-gray-900 mb-2">Email Summary</h3>
                     <div className="space-y-1 text-sm text-gray-600">
-                      <p>• Target: All leads</p>
-                      <p>• Purpose: {selectedPurpose || "Not selected"}</p>
-                      <p>• Persona: {personaOptions.find(p => p.value === selectedPersona)?.label || "None selected"}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                        <p>Target: All leads</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                        <p>Purpose: {selectedPurpose || "Not selected"}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                        <p>Persona: {personaOptions.find(p => p.value === selectedPersona)?.label || "None selected"}</p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -472,8 +493,8 @@ export default function EmailTriggerModal({
                     <div>
                       <h3 className="font-medium text-blue-900 mb-1">Automated Festive Greetings</h3>
                       <p className="text-sm text-blue-700">
-                        Enable automatic festive email sending on special occasions. When enabled, 
-                        our system will automatically send personalized greetings to all your leads 
+                        Enable automatic festive email sending on special occasions. When enabled,
+                        our system will automatically send personalized greetings to all your leads
                         on the selected festival days.
                       </p>
                     </div>
@@ -484,7 +505,7 @@ export default function EmailTriggerModal({
                 {Object.keys(festiveSettings).some(key => festiveSettings[key]) && (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
                     <div className="flex items-start space-x-2">
-                      <div className="text-green-600 text-xl">✓</div>
+                      <div className="text-green-600"><CheckCircle size={20} /></div>
                       <div>
                         <h4 className="font-medium text-green-900 mb-1">
                           Active Festivals ({Object.values(festiveSettings).filter(Boolean).length})
@@ -504,59 +525,62 @@ export default function EmailTriggerModal({
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {FESTIVE_OCCASIONS.map((festival) => (
-                    <motion.div
-                      key={festival.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3 flex-1">
-                          <div className="text-3xl">{festival.emoji}</div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 mb-1">
-                              {festival.name}
-                            </h4>
-                            <p className="text-xs text-gray-500 mb-1">{festival.date}</p>
-                            <p className="text-sm text-gray-600">{festival.description}</p>
+                  {FESTIVE_OCCASIONS.map((festival) => {
+                    const Icon = festival.icon;
+                    return (
+                      <motion.div
+                        key={festival.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-3 flex-1">
+                            <div className={`p-2 rounded-lg bg-gray-50 ${festival.color}`}>
+                              <Icon size={24} />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 mb-1">
+                                {festival.name}
+                              </h4>
+                              <p className="text-xs text-gray-500 mb-1">{festival.date}</p>
+                              <p className="text-sm text-gray-600">{festival.description}</p>
+                            </div>
+                          </div>
+                          <div className="ml-3">
+                            <button
+                              onClick={() => handleFestiveToggle(festival.id, !festiveSettings[festival.id])}
+                              disabled={loadingFestive}
+                              className={`
+                                relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                ${festiveSettings[festival.id] ? 'bg-blue-600' : 'bg-gray-300'}
+                                ${loadingFestive ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                              `}
+                            >
+                              <span
+                                className={`
+                                  inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                                  ${festiveSettings[festival.id] ? 'translate-x-6' : 'translate-x-1'}
+                                `}
+                              />
+                            </button>
                           </div>
                         </div>
-                        <div className="ml-3">
-                          <button
-                            onClick={() => handleFestiveToggle(festival.id, !festiveSettings[festival.id])}
-                            disabled={loadingFestive}
-                            className={`
-                              relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                              ${festiveSettings[festival.id] ? 'bg-blue-600' : 'bg-gray-300'}
-                              ${loadingFestive ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                            `}
-                          >
-                            <span
-                              className={`
-                                inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                                ${festiveSettings[festival.id] ? 'translate-x-6' : 'translate-x-1'}
-                              `}
-                            />
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-6">
                   <p className="text-sm text-amber-800">
-                    <span className="font-medium">Note:</span> Festive emails will be sent automatically 
+                    <span className="font-medium">Note:</span> Festive emails will be sent automatically
                     on the festival day at 9:00 AM local time. You can enable or disable any festival at any time.
                   </p>
                 </div>
               </div>
             )}
           </div>
-
-
 
           {/* Footer */}
           <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
@@ -606,11 +630,11 @@ export default function EmailTriggerModal({
               >
                 <motion.div
                   initial={{ scale: 0, rotate: -180 }}
-                  animate={{ 
+                  animate={{
                     scale: [0, 1.2, 1],
                     rotate: [0, 0, 0]
                   }}
-                  transition={{ 
+                  transition={{
                     duration: 0.6,
                     ease: "backOut"
                   }}
@@ -623,17 +647,17 @@ export default function EmailTriggerModal({
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2, duration: 0.4 }}
                   >
-                    <motion.div 
+                    <motion.div
                       className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center"
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.1, duration: 0.5, ease: "backOut" }}
                     >
                       {/* Checkmark SVG with draw animation */}
-                      <motion.svg 
-                        width="48" 
-                        height="48" 
-                        viewBox="0 0 24 24" 
+                      <motion.svg
+                        width="48"
+                        height="48"
+                        viewBox="0 0 24 24"
                         fill="none"
                         className="text-white"
                       >
@@ -649,16 +673,16 @@ export default function EmailTriggerModal({
                         />
                       </motion.svg>
                     </motion.div>
-                    
+
                     {/* Success ripple effect */}
                     <motion.div
                       className="absolute inset-0 bg-green-500/20 rounded-full"
                       initial={{ scale: 1, opacity: 0 }}
-                      animate={{ 
+                      animate={{
                         scale: [1, 1.5, 2],
                         opacity: [0, 0.6, 0]
                       }}
-                      transition={{ 
+                      transition={{
                         delay: 0.3,
                         duration: 1.2,
                         repeat: 2,
@@ -666,7 +690,7 @@ export default function EmailTriggerModal({
                       }}
                     />
                   </motion.div>
-                  
+
                   {/* Success Message */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -674,10 +698,10 @@ export default function EmailTriggerModal({
                     transition={{ delay: 0.6, duration: 0.4 }}
                   >
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      Emails Sent Successfully! 
+                      Emails Sent Successfully!
                     </h3>
                     <p className="text-gray-600 max-w-sm mx-auto">
-                      Your personalized emails have been generated and sent to all leads. 
+                      Your personalized emails have been generated and sent to all leads.
                       They should receive them shortly.
                     </p>
                   </motion.div>
@@ -692,7 +716,7 @@ export default function EmailTriggerModal({
                         top: `${Math.random() * 100}%`,
                       }}
                       initial={{ scale: 0, rotate: 0 }}
-                      animate={{ 
+                      animate={{
                         scale: [0, 1, 0],
                         rotate: [0, 180, 360],
                         y: [0, -20, 20]

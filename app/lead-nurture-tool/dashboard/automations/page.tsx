@@ -24,6 +24,7 @@ import {
   Loader,
 } from "lucide-react";
 import { StepCompletionButton } from "@/components/StepCompletionButton";
+import { AutomationStepIndicator } from "@/components/AutomationStepIndicator";
 
 interface Batch {
   id: string;
@@ -132,7 +133,7 @@ export default function AutomationsPage() {
   const generateDraftEmails = async (batch: Batch) => {
     // Prevent generating drafts if batch already launched
     if (selectedBatch?.status === 'active') {
-      showToast('Batch automation already launched. Cannot generate new drafts.', 'error');
+      showToast('Campaign automation already launched. Cannot generate new drafts.', 'error');
       return;
     }
 
@@ -151,18 +152,18 @@ export default function AutomationsPage() {
       let target_city: string[] = [];
 
 
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('full_name, company_name, markets')
-          .eq('id', userId)
-          .single();
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name, company_name, markets')
+        .eq('id', userId)
+        .single();
 
-        if (profileData) {
-          agentName = profileData.full_name || agentName;
-          companyName = profileData.company_name || companyName;
-          // Don't automatically use profile markets - user should specify target city
-          // target_city = profileData.markets || target_city;
-        }
+      if (profileData) {
+        agentName = profileData.full_name || agentName;
+        companyName = profileData.company_name || companyName;
+        // Don't automatically use profile markets - user should specify target city
+        // target_city = profileData.markets || target_city;
+      }
 
       console.log(selectedBatch)
 
@@ -173,7 +174,7 @@ export default function AutomationsPage() {
         },
         body: JSON.stringify({
           campaign_id: batchId,
-          campaign_name: selectedBatch?.batch_name || 'Batch Automation',
+          campaign_name: selectedBatch?.batch_name || 'Campaign Automation',
           target_city: target_city.length > 0 ? target_city : ["your market"],
           persona: selectedBatch?.persona || 'buyer',
           objective: selectedBatch?.objective || 'lead_nurturing',
@@ -250,32 +251,18 @@ export default function AutomationsPage() {
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("signature_block")
-        .eq("id", user.id)
-        .single();
 
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-        showToast("Could not load your signature", "error");
-        return;
-      }
 
-      // Append signature block to each email body
-      const signatureBlock = profile?.signature_block || "";
       const draftsWithSignature = finalDrafts.map((draft) => ({
         ...draft,
-        body: signatureBlock
-          ? `${draft.body}<br/><br/>---<br/><br/>${signatureBlock.replace(/\n/g, '<br/>')}`
-          : draft.body,
+        body: draft.body,
       }));
 
       // Store drafts for next step (scheduling)
       setDraftEmails(draftsWithSignature);
 
       // Save approved drafts to campaign
-      showToast("✅ Email drafts approved with your signature!", "success");
+      showToast("Email drafts approved with your signature!", "success");
       setAutomationStep(3);
       setShowDraftReview(false);
     } catch (error) {
@@ -289,7 +276,7 @@ export default function AutomationsPage() {
   const handleLaunchCampaign = async () => {
     try {
       if (!selectedBatch) {
-        showToast("Batch not selected", "error");
+        showToast("Campaign not selected", "error");
         return;
       }
 
@@ -408,7 +395,7 @@ export default function AutomationsPage() {
       const errorMessage = axios.isAxiosError(error)
         ? error.response?.data?.detail || error.message
         : error instanceof Error ? error.message : 'Unknown error';
-      showToast(`Failed to load pending emails: ${errorMessage}`, "error");
+      // showToast(`Failed to load pending emails: ${errorMessage}`, "error");
     } finally {
       setIsLoadingStats(false);
     }
@@ -438,8 +425,8 @@ export default function AutomationsPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 100 }}
             className={`px-4 py-3 rounded-lg font-semibold text-sm flex items-center gap-2 pointer-events-auto ${toast.type === "success"
-                ? "bg-green-500/20 border border-green-500/50 text-green-300"
-                : "bg-red-500/20 border border-red-500/50 text-red-300"
+              ? "bg-green-500/20 border border-green-500/50 text-green-300"
+              : "bg-red-500/20 border border-red-500/50 text-red-300"
               }`}
           >
             {toast.type === "success" ? (
@@ -470,7 +457,7 @@ export default function AutomationsPage() {
             </p>
           </div>
           <div className="flex items-center space-x-3">
-            <StepCompletionButton 
+            <StepCompletionButton
               stepName="setup-automations"
             />
             <motion.button
@@ -502,11 +489,10 @@ export default function AutomationsPage() {
                 whileTap={!(isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts) ? { scale: 0.98 } : {}}
                 onClick={resetAutomation}
                 disabled={isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                  (isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts)
-                    ? "bg-white/5 border border-white/10 text-neutral-500 cursor-not-allowed opacity-50"
-                    : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 cursor-pointer"
-                }`}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${(isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts)
+                  ? "bg-white/5 border border-white/10 text-neutral-500 cursor-not-allowed opacity-50"
+                  : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 cursor-pointer"
+                  }`}
               >
                 <X size={16} />
                 Back to Campaigns
@@ -543,18 +529,18 @@ export default function AutomationsPage() {
                         Fetching your signature block
                       </div>
                       <div className="flex items-center gap-2 text-xs text-white/60">
-                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
                         Appending signature to {draftEmails.length} emails
                       </div>
                       <div className="flex items-center gap-2 text-xs text-white/60">
-                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+                        <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
                         Preparing for campaign launch
                       </div>
                     </div>
                   </div>
                 </motion.div>
               )}
-              
+
               <DraftReview
                 drafts={draftEmails}
                 onDraftsApprove={handleDraftsApprove}
@@ -577,11 +563,10 @@ export default function AutomationsPage() {
                 whileTap={!(isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts) ? { scale: 0.98 } : {}}
                 onClick={resetAutomation}
                 disabled={isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                  (isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts)
-                    ? "bg-white/5 border border-white/10 text-neutral-500 cursor-not-allowed opacity-50"
-                    : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 cursor-pointer"
-                }`}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${(isGeneratingDrafts || isLaunchingCampaign || isApprovingDrafts)
+                  ? "bg-white/5 border border-white/10 text-neutral-500 cursor-not-allowed opacity-50"
+                  : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 cursor-pointer"
+                  }`}
               >
                 <X size={16} />
                 Back to Campaigns
@@ -595,7 +580,7 @@ export default function AutomationsPage() {
               className="bg-white/5 border border-white/10 rounded-xl p-6"
             >
               <h2 className="text-2xl font-bold text-white mb-4">
-                {selectedBatch.batch_name || selectedBatch.subject || "Batch Automation Setup"}
+                {selectedBatch.batch_name || selectedBatch.subject || "Campaign Automation Setup"}
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 rounded-lg p-4">
@@ -609,10 +594,10 @@ export default function AutomationsPage() {
                 <div className="bg-white/5 rounded-lg p-4">
                   <p className="text-neutral-400 text-sm mb-1">Status</p>
                   <p className={`font-semibold ${selectedBatch.status === 'active'
-                      ? 'text-green-400'
-                      : selectedBatch.status === 'paused'
-                        ? 'text-yellow-400'
-                        : 'text-blue-400'
+                    ? 'text-green-400'
+                    : selectedBatch.status === 'paused'
+                      ? 'text-yellow-400'
+                      : 'text-blue-400'
                     }`}>
                     {selectedBatch.status === 'active' ? 'Active' : selectedBatch.status === 'paused' ? 'Paused' : 'Draft'}
                   </p>
@@ -637,7 +622,7 @@ export default function AutomationsPage() {
                 </h3>
 
                 {isLoadingStats ? (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center justify-center py-8 space-y-3"
@@ -681,7 +666,7 @@ export default function AutomationsPage() {
                           <div className="flex-1">
                             <p className="text-white font-medium text-sm">{email.subject}</p>
                             <p className="text-neutral-400 text-xs mt-0.5">
-                              📅 {formattedDate} at {formattedTime}
+                              <Calendar size={12} className="inline mr-1" /> {formattedDate} at {formattedTime}
                             </p>
                           </div>
                           <span className="text-neutral-400 text-xs whitespace-nowrap">
@@ -699,81 +684,16 @@ export default function AutomationsPage() {
 
             {/* Steps (only show if campaign is not active) */}
             {selectedBatch.status !== 'active' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-              >
-                {[
-                  {
-                    step: 1,
-                    title: "Generate Email Drafts",
-                    description: "AI creates 5 unique email variations tailored to your campaign persona and objective",
-                    icon: Zap,
-                    completed: automationStep > 1,
-                  },
-                  {
-                    step: 2,
-                    title: "Review & Approve",
-                    description: "Review all drafts, edit as needed, and approve all before proceeding",
-                    icon: CheckCircle,
-                    completed: automationStep > 2,
-                  },
-                  {
-                    step: 3,
-                    title: "Launch Campaign",
-                    description: "Your emails are queued and will be sent automatically according to the schedule",
-                    icon: Mail,
-                    completed: false,
-                  },
-                ].map((item: any, idx: number) => {
-                  const Icon = item.icon;
-                  return (
-                    <motion.div
-                      key={item.step}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.1 }}
-                      className={`p-4 rounded-xl border transition-all ${automationStep === item.step
-                          ? "bg-[var(--color-gold)]/20 border-[var(--color-gold)]/50"
-                          : item.completed
-                            ? "bg-green-500/10 border-green-500/30"
-                            : "bg-white/5 border-white/10"
-                        }`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${item.completed
-                              ? "bg-green-500/20 border border-green-500/50"
-                              : automationStep === item.step
-                                ? "bg-[var(--color-gold)]/20 border border-[var(--color-gold)]/50"
-                                : "bg-white/10 border border-white/20"
-                            }`}
-                        >
-                          {item.completed ? (
-                            <CheckCircle size={20} className="text-green-400" />
-                          ) : (
-                            <Icon size={20} className="text-white" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-white mb-1">Step {item.step}: {item.title}</h3>
-                          <p className="text-neutral-400 text-sm">{item.description}</p>
-                        </div>
-                        {automationStep === item.step && (
-                          <motion.div
-                            initial={{ rotate: -90 }}
-                            animate={{ rotate: 0 }}
-                            className="flex-shrink-0"
-                          >
-                            <ChevronRight size={20} className="text-[var(--color-gold)]" />
-                          </motion.div>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
+              <div className="mb-8">
+                <AutomationStepIndicator
+                  currentStep={automationStep}
+                  steps={[
+                    { id: 1, label: "Generate Drafts", icon: Zap },
+                    { id: 2, label: "Review & Approve", icon: CheckCircle },
+                    { id: 3, label: "Launch Campaign", icon: Mail },
+                  ]}
+                />
+              </div>
             )}
 
             {/* Action Button */}
@@ -806,11 +726,11 @@ export default function AutomationsPage() {
                             Analyzing campaign requirements
                           </div>
                           <div className="flex items-center gap-2 text-xs text-yellow-300/70">
-                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
                             Creating personalized content for {selectedBatch?.persona || 'target audience'}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-yellow-300/70">
-                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
                             Generating 5 unique email variations
                           </div>
                         </div>
@@ -825,8 +745,8 @@ export default function AutomationsPage() {
                   onClick={() => generateDraftEmails(selectedBatch)}
                   disabled={automationStep > 1 || isGeneratingDrafts || selectedBatch?.status === 'active'}
                   className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${automationStep > 1 || isGeneratingDrafts || selectedBatch?.status === 'active'
-                      ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
-                      : "bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black"
+                    ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
+                    : "bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black"
                     }`}
                 >
                   {isGeneratingDrafts ? (
@@ -834,7 +754,7 @@ export default function AutomationsPage() {
                   ) : selectedBatch?.status === 'active' ? (
                     <>
                       <CheckCircle size={20} />
-                      ✅ Campaign Already Launched
+                      Campaign Already Launched
                     </>
                   ) : automationStep > 1 ? (
                     <>
@@ -879,10 +799,10 @@ export default function AutomationsPage() {
                       className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
                     />
                     <p className="text-xs text-neutral-500">
-                      First email sends on {new Date(campaignStartDate).toLocaleString('en-US', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
+                      First email sends on {new Date(campaignStartDate).toLocaleString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
                         day: 'numeric',
                         hour: 'numeric',
                         minute: '2-digit'
@@ -918,11 +838,11 @@ export default function AutomationsPage() {
                             Saving approved email drafts
                           </div>
                           <div className="flex items-center gap-2 text-xs text-green-300/70">
-                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
                             Scheduling delivery times for {draftEmails.length} emails
                           </div>
                           <div className="flex items-center gap-2 text-xs text-green-300/70">
-                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
                             Adding to send queue
                           </div>
                         </div>
@@ -937,8 +857,8 @@ export default function AutomationsPage() {
                   onClick={handleLaunchCampaign}
                   disabled={isLaunchingCampaign}
                   className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${isLaunchingCampaign
-                      ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
-                      : "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30"
+                    ? "bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
+                    : "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30"
                     }`}
                 >
                   {isLaunchingCampaign ? (
@@ -1044,10 +964,10 @@ export default function AutomationsPage() {
                     <div className="flex items-center gap-2 pt-4 border-t border-white/10">
                       <div
                         className={`w-2 h-2 rounded-full ${batch.status === "active"
-                            ? "bg-green-400"
-                            : batch.status === "paused"
-                              ? "bg-yellow-400"
-                              : "bg-gray-400"
+                          ? "bg-green-400"
+                          : batch.status === "paused"
+                            ? "bg-yellow-400"
+                            : "bg-gray-400"
                           }`}
                       />
                       <span className="text-xs text-neutral-400 capitalize">{batch.status}</span>
@@ -1061,7 +981,7 @@ export default function AutomationsPage() {
       </AnimatePresence>
 
       <Toast />
-      
+
       {/* Email Trigger Modal */}
       <EmailTriggerModal
         isOpen={showEmailTriggerModal}

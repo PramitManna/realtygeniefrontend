@@ -263,11 +263,11 @@ export default function BatchesPage() {
     // Persona values are already in correct database format
     // Just validate they match our expected values
     const validPersonas = ['buyer', 'seller', 'investor', 'past_client', 'referral', 'cold_prospect'];
-    
+
     if (validPersonas.includes(persona)) {
       return persona;
     }
-    
+
     // Fallback mapping for any legacy or unexpected formats
     const lowerPersona = persona.toLowerCase();
     if (lowerPersona.includes("buyer")) return "buyer";
@@ -276,7 +276,7 @@ export default function BatchesPage() {
     if (lowerPersona.includes("past") || lowerPersona.includes("client")) return "past_client";
     if (lowerPersona.includes("referral")) return "referral";
     if (lowerPersona.includes("cold") || lowerPersona.includes("prospect")) return "cold_prospect";
-    
+
     return "buyer"; // Default fallback
   }
 
@@ -307,13 +307,13 @@ export default function BatchesPage() {
         className="flex items-center justify-between mb-8"
       >
         <div>
-          <h2 className="text-2xl font-bold text-white">Batches</h2>
-          <p className="text-neutral-400 text-sm mt-1">
-            Organize and manage your lead batches
+          <h1 className="text-4xl font-bold text-white">Campaigns</h1>
+          <p className="text-neutral-400 mt-2">
+            Organize and manage your lead campaigns
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <StepCompletionButton 
+          <StepCompletionButton
             stepName="create-batch"
             nextStepUrl="/lead-nurture-tool/dashboard/leads"
           />
@@ -321,8 +321,8 @@ export default function BatchesPage() {
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black font-semibold rounded-lg transition-all hover:shadow-lg hover:shadow-[var(--color-gold)]/30"
           >
-            <Plus size={20} />
-            <span>New Batch</span>
+            <Plus className="h-4 w-4" />
+            <span>New Campaign</span>
           </button>
         </div>
       </motion.div>
@@ -333,13 +333,15 @@ export default function BatchesPage() {
         </div>
       ) : batches.length === 0 ? (
         <div className="text-center py-16 bg-[#0A0A0A]/50 rounded-lg border border-neutral-800">
-          <p className="text-neutral-400 mb-4">No batches yet</p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 bg-[var(--color-gold)] hover:bg-[var(--color-gold-soft)] text-black px-4 py-2 rounded-lg transition-all font-semibold"
-          >
-            <Plus size={18} /> Create your first batch
-          </button>
+          <div className="text-center py-12">
+            <p className="text-neutral-400 mb-4">No campaigns found</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-6 py-2 bg-[var(--color-gold)] text-black rounded-lg font-medium hover:bg-[var(--color-gold-soft)] transition-colors"
+            >
+              Create First Campaign
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -357,11 +359,10 @@ export default function BatchesPage() {
                     <p className="text-sm text-neutral-400 mb-2">{batch.description}</p>
                   )}
                 </div>
-                <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                  batch.status === 'active'
+                <span className={`px-2 py-1 rounded text-xs font-semibold ${batch.status === 'active'
                     ? 'bg-green-500/20 text-green-400'
                     : 'bg-yellow-500/20 text-yellow-400'
-                }`}>
+                  }`}>
                   {batch.status}
                 </span>
               </div>
@@ -390,11 +391,10 @@ export default function BatchesPage() {
                 </button>
                 <button
                   onClick={() => handleStatusToggle(batch)}
-                  className={`flex-1 px-3 py-2 rounded transition-all text-sm font-semibold bg-neutral-800 hover:bg-[var(--color-gold)]/20 hover:text-[var(--color-gold)] text-white ${
-                    batch.status === 'active'
+                  className={`flex-1 px-3 py-2 rounded transition-all text-sm font-semibold bg-neutral-800 hover:bg-[var(--color-gold)]/20 hover:text-[var(--color-gold)] text-white ${batch.status === 'active'
                       ? 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
                       : 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
-                  }`}
+                    }`}
                 >
                   {batch.status === 'active' ? 'Pause' : 'Resume'}
                 </button>
@@ -422,7 +422,7 @@ export default function BatchesPage() {
             className="bg-[#0A0A0A] rounded-lg p-6 w-full max-w-md border border-neutral-800 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-white">Create New Batch</h2>
+              <h2 className="text-2xl font-bold text-white mb-6">Create New Campaign</h2>
               <button
                 onClick={() => {
                   setShowCreateModal(false);
@@ -438,13 +438,15 @@ export default function BatchesPage() {
 
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-sm font-semibold text-neutral-200 mb-2">Batch Name *</label>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Campaign Name
+                </label>
                 <input
                   type="text"
                   value={newBatchName}
                   onChange={(e) => setNewBatchName(e.target.value)}
-                  placeholder="e.g., January Campaign, Q4 Leads"
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white placeholder-neutral-500 focus:outline-none focus:border-[var(--color-gold)]/50"
+                  placeholder="e.g., Summer Leads 2024"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]/50 focus:border-[var(--color-gold)]/50 transition-all"
                 />
               </div>
 
@@ -783,13 +785,12 @@ export default function BatchesPage() {
             initial={{ opacity: 0, x: 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 100 }}
-            className={`px-4 py-3 rounded-lg text-white pointer-events-auto flex items-center gap-2 ${
-              toast.type === 'success'
+            className={`px-4 py-3 rounded-lg text-white pointer-events-auto flex items-center gap-2 ${toast.type === 'success'
                 ? 'bg-green-600'
                 : toast.type === 'error'
-                ? 'bg-red-600'
-                : 'bg-[var(--color-gold)]'
-            }`}
+                  ? 'bg-red-600'
+                  : 'bg-[var(--color-gold)]'
+              }`}
           >
             <span>{toast.message}</span>
             <button
